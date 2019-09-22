@@ -14,7 +14,7 @@ u_frame = np.empty((number_frames, y_res, x_res), dtype=int)
 v_frame = np.empty((number_frames, y_res, x_res), dtype=int)
 #v_frame = [[[0 for col in range(y_res)] for col in range(x_res)] for row in range(number_frames)]
 
-yuv_file = open("foreman_cif.yuv","rb")
+yuv_file = open("videos/foreman_cif.yuv","rb")
 
 
 for frame in range(number_frames) :
