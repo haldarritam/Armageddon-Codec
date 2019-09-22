@@ -2,3 +2,4 @@ videos/
 yuvplayer.exe
 converted.yuv
 .DS_Store
+__pycache__/
