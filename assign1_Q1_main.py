@@ -19,16 +19,18 @@ for frame in range(number_frames) :
     raw = yuv_file.read(bytes_frame)
     y_frame = np.concatenate((y_frame, raw[ : x_res * y_res]), axis=None)
 
-    for y_it in range(y_res) :    
+    for y_it in range(y_res) :
+        u_it = 0
         for x_it in range(x_res) :
             it_offset = y_it * x_res + x_it
-            u_offset = total_pixels_frame + it_offset
+            u_offset = total_pixels_frame + u_it
             v_offset = (int) (u_offset + total_pixels_frame / 4)
             
             if y_it % 2 == 0 :
                 if x_it % 2 == 0 :#if it_offset % 2 == 0 :
                     u_frame[y_it][x_it][frame] = int.from_bytes(raw[u_offset : u_offset + 1], byteorder=sys.byteorder)
                     v_frame[y_it][x_it][frame] = int.from_bytes(raw[v_offset : v_offset + 1], byteorder=sys.byteorder)
+                    u_it = u_it + 1
                 else :
                     u_frame[y_it][x_it][frame] = u_frame[y_it][x_it - 1][frame]
                     v_frame[y_it][x_it][frame] = v_frame[y_it][x_it - 1][frame]
