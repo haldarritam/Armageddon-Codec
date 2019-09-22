@@ -9,8 +9,8 @@ total_pixels_frame = x_res * y_res
 bytes_frame = (int) (3 * (x_res * y_res) / 2)
 
 y_frame = np.empty((0,0))
-u_frame = np.empty((x_res, y_res, number_frames))
-v_frame = np.empty((x_res, y_res, number_frames))
+u_frame = np.empty((y_res, x_res, number_frames))
+v_frame = np.empty((y_res, x_res, number_frames))
 
 yuv_file = open("foreman_cif.yuv","rb")
 
@@ -27,14 +27,14 @@ for frame in range(number_frames) :
             
             if y_it % 2 == 0 :
                 if x_it % 2 == 0 :#if it_offset % 2 == 0 :
-                    u_frame[x_it][y_it][frame] = int.from_bytes(raw[u_offset : u_offset + 1], byteorder=sys.byteorder)
-                    v_frame[x_it][y_it][frame] = int.from_bytes(raw[v_offset : v_offset + 1], byteorder=sys.byteorder)
+                    u_frame[y_it][x_it][frame] = int.from_bytes(raw[u_offset : u_offset + 1], byteorder=sys.byteorder)
+                    v_frame[y_it][x_it][frame] = int.from_bytes(raw[v_offset : v_offset + 1], byteorder=sys.byteorder)
                 else :
-                    u_frame[x_it][y_it][frame] = u_frame[x_it - 1][y_it][frame]
-                    v_frame[x_it][y_it][frame] = v_frame[x_it - 1][y_it][frame]
+                    u_frame[y_it][x_it][frame] = u_frame[y_it][x_it - 1][frame]
+                    v_frame[y_it][x_it][frame] = v_frame[y_it][x_it - 1][frame]
             else :
-                u_frame[x_it][y_it][frame] = u_frame[x_it][y_it - 1][frame]
-                v_frame[x_it][y_it][frame] = v_frame[x_it][y_it - 1][frame]
+                u_frame[y_it][x_it][frame] = u_frame[y_it - 1][x_it][frame]
+                v_frame[y_it][x_it][frame] = v_frame[y_it - 1][x_it][frame]
           
     progress = (int) (frame / (number_frames - 1) * 100)
     if progress % 10 == 0 :
@@ -51,11 +51,11 @@ for frame in range(number_frames) :
     
     for y_it in range(y_res) :    
         for x_it in range(x_res) :
-            converted.write((int)(u_frame[x_it][y_it][frame]).to_bytes(1, byteorder=sys.byteorder))
+            converted.write((int)(u_frame[y_it][x_it][frame]).to_bytes(1, byteorder=sys.byteorder))
             
     for y_it in range(y_res) :    
         for x_it in range(x_res) :
-            converted.write((int)(v_frame[x_it][y_it][frame]).to_bytes(1, byteorder=sys.byteorder))
+            converted.write((int)(v_frame[y_it][x_it][frame]).to_bytes(1, byteorder=sys.byteorder))
     
 converted.close()
 
