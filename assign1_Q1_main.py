@@ -12,8 +12,7 @@ y_frame = np.empty((0,0))
 u_frame = np.empty((number_frames, y_res, x_res), dtype=int)
 v_frame = np.empty((number_frames, y_res, x_res), dtype=int)
 
-yuv_file = open("bus_cif.yuv","rb")
-
+yuv_file = open("videos/bus_cif.yuv","rb")
 
 for frame in range(number_frames) :
     raw = yuv_file.read(bytes_frame)
