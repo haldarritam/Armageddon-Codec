@@ -75,7 +75,7 @@ if __name__ == "__main__":
     number_frames = 300
     x_res = 352
     y_res = 288
-    converter.ftz_to_fff("videos/foreman_cif.yuv", y_res, x_res, number_frames)
+    converter.ftz_to_fff("../videos/foreman_cif.yuv", y_res, x_res, number_frames)
 
 
     
