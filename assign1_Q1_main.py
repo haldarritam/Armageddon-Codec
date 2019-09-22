@@ -27,7 +27,6 @@ for frame in range(number_frames) :
                 if it_offset % 2 == 0 :
                     u_frame[x_it][y_it][frame] = int.from_bytes(raw[u_offset : u_offset + 1], byteorder='big')
                     v_frame[x_it][y_it][frame] = int.from_bytes(raw[v_offset : v_offset + 1], byteorder='big')
-                    a=1
                 else :
                     u_frame[x_it][y_it][frame] = u_frame[x_it - 1][y_it][frame]
                     v_frame[x_it][y_it][frame] = v_frame[x_it - 1][y_it][frame]
@@ -36,6 +35,7 @@ for frame in range(number_frames) :
                 v_frame[x_it][y_it][frame] = v_frame[x_it][y_it - 1][frame]
 
     print('Progress: ', (int) (frame/number_frames*100), '%')
+    
 yuv_file.close()
 
 
