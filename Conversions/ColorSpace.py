@@ -41,7 +41,7 @@ class CSC:
               
         yuv_file.close()
 
-        converted = open(self_output_file_name(file), "wb")
+        converted = open(self._output_file_name(file), "wb")
 
         for frame in range(number_frames) :
             converted.write(y_frame[frame])
@@ -66,8 +66,7 @@ class CSC:
             
     def _output_file_name(self, orig_file_name) :
         file_and_extension = orig_file_name.split(".")
-        file_and_path = file_and_extension[0].split("/")
-        return file_and_path[len(file_and_path) - 1] + "_444.yuv"
+        return file_and_extension[len(file_and_extension) - 2] + "_444.yuv"
         
     
 if __name__ == "__main__":
