@@ -1,5 +1,7 @@
 name: armageddon
 dependencies:
   - python=3.7.4
+  - pip
   - numpy
-
+  - pip:
+    - pypng==0.0.20

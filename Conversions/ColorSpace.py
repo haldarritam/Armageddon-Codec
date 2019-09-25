@@ -66,7 +66,7 @@ class CSC:
             
     def _output_file_name(self, orig_file_name) :
         file_and_extension = orig_file_name.split(".")
-        return file_and_extension[len(file_and_extension) - 2] + "_444.yuv"
+        return ".".join(file_and_extension[:-1]) + "_444.yuv"
         
     
 if __name__ == "__main__":
