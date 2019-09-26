@@ -4,7 +4,30 @@ import sys
 class CSC:
     def __init__(self):
         '''Initialize CSC'''
-    
+    def ftz_to_bw(self, file, y_res, x_res, number_frames):
+        total_pixels_frame = x_res * y_res
+        bytes_frame = (int) (3 * (x_res * y_res) / 2)
+
+        y_frame = np.empty((0,0))
+
+        yuv_file = open(file,"rb")
+
+        for frame in range(number_frames) :
+            raw = yuv_file.read(bytes_frame)
+            y_frame = np.concatenate((y_frame, raw[: x_res * y_res]), axis=None)
+                                    
+            self._progress("Converting:", frame, number_frames)  
+              
+        yuv_file.close()
+
+        converted = open("../videos/black_and_white.yuv", "wb")
+
+        for frame in range(number_frames) :
+            converted.write(y_frame[frame])    
+            self._progress("Saving file:", frame, number_frames)
+            
+        converted.close()
+
     def ftz_to_fff(self, file, y_res, x_res, number_frames):
         total_pixels_frame = x_res * y_res
         bytes_frame = (int) (3 * (x_res * y_res) / 2)
@@ -74,7 +97,8 @@ if __name__ == "__main__":
     number_frames = 300
     x_res = 352
     y_res = 288
-    converter.ftz_to_fff("../videos/foreman_cif.yuv", y_res, x_res, number_frames)
+    # converter.ftz_to_fff("../videos/foreman_cif.yuv", y_res, x_res, number_frames)
+    converter.ftz_to_bw("../videos/foreman_cif.yuv", y_res, x_res, number_frames)
 
 
     
