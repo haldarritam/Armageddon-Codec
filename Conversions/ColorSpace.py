@@ -4,13 +4,13 @@ import sys
 class CSC:
     def __init__(self):
         '''Initialize CSC'''
-    def ftz_to_bw(self, file, y_res, x_res, number_frames):
+    def ftz_to_bw(self, in_file, out_file, y_res, x_res, number_frames):
         total_pixels_frame = x_res * y_res
         bytes_frame = (int) (3 * (x_res * y_res) / 2)
 
         y_frame = np.empty((0,0))
 
-        yuv_file = open(file,"rb")
+        yuv_file = open(in_file,"rb")
 
         for frame in range(number_frames) :
             raw = yuv_file.read(bytes_frame)
@@ -20,7 +20,7 @@ class CSC:
               
         yuv_file.close()
 
-        converted = open("../videos/black_and_white.yuv", "wb")
+        converted = open(out_file, "wb")
 
         for frame in range(number_frames) :
             converted.write(y_frame[frame])    
