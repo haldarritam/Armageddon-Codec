@@ -33,10 +33,10 @@ def block(file, y_res, x_res, number_frames, i):
               bl_y_frame[frame][bl_y_it][bl_x_it][y_it][x_it] = 128
             else:
               it = (((bl_y_it * i) + y_it) * x_res) + ((bl_x_it * i + x_it))
-              bl_y_frame[frame][bl_y_it][bl_x_it][y_it][x_it] = int.from_bytes((raw[it : it + 1]), byteorder=sys.byteorder)      
+              bl_y_frame[frame][bl_y_it][bl_x_it][y_it][x_it] = int.from_bytes((raw[it : it + 1]), byteorder=sys.byteorder)
   y_file.close()
 
-  return bl_y_frame, n_y_blocks, n_x_blocks
+  return bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res
 
 def average(bl_y_frame, number_frames, n_y_blocks, n_x_blocks, out_file):
   for frame in range(number_frames):
@@ -73,6 +73,6 @@ if __name__=="__main__":
   x_res = 352
   i = 16
 
-  bl_y_frame, n_y_blocks, n_x_blocks = block(in_file, y_res, x_res, number_frames, i)
+  bl_y_frame, n_y_blocks, n_x_blocks,_,_ = block(in_file, y_res, x_res, number_frames, i)
   
   average(bl_y_frame, number_frames, n_y_blocks, n_x_blocks, out_file)
