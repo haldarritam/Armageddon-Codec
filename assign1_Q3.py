@@ -40,6 +40,34 @@ def calculate_residual_block(block, reconstructed, head_idy, head_idx, i, mv):
 
   return residual
 
+def calculate_approximate_residual_block(block):
+
+  sign_block = np.sign(block)
+  abs_block = np.absolute(block)
+
+  abs_block[abs_block == 0] = 2
+
+  # block_c = np.power(2, np.ceil((np.log(abs_block) / np.log(2))))
+  # block_f = np.power(2, np.floor((np.log(abs_block) / np.log(2))))
+
+  # for y_it in range(abs_block.shape[0]):
+  #   for x_it in range(abs_block.shape[1]):
+      
+  #     floor = abs_block[y_it][x_it] - block_f[y_it][x_it]
+  #     ceil = block_c[y_it][x_it] - abs_block[y_it][x_it]
+      
+  #     if floor < ceil:
+  #       block[y_it][x_it] = block_f[y_it][x_it]
+  #     else:
+  #       block[y_it][x_it] = block_c[y_it][x_it]
+      
+  #     block[y_it][x_it] = block[y_it][x_it] * sign_block[y_it][x_it]
+
+  block_f = np.power(2, np.floor((np.log(abs_block) / np.log(2))))
+  block = np.multiply(block_f, sign_block)
+
+  return block
+
 def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks):
   
   temp = np.empty((ext_y_res, ext_x_res), dtype=int)
@@ -52,6 +80,13 @@ def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext
 
   new_reconstructed = np.add(temp, reconstructed)
 
+
+  # print(temp[0][3])
+  # print("\n\n\n")
+  # print(reconstructed[0][3])
+  # print("\n\n\n")
+  # print(new_reconstructed[0][3])
+
   return new_reconstructed
 
 
@@ -62,8 +97,8 @@ if __name__ == "__main__":
   number_frames = 300
   y_res = 288
   x_res = 352
-  i = 16
-  r =1
+  i = 8
+  r = 8
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res= pre.block(in_file, y_res, x_res, number_frames, i)
 
@@ -88,12 +123,15 @@ if __name__ == "__main__":
     residual_matrix = np.empty((n_y_blocks,n_x_blocks, i, i))
     for bl_y_it in range(n_y_blocks) :    
       for bl_x_it in range(n_x_blocks):
-        residual_matrix[bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, bl_y_it * i, bl_x_it * i, i, mv[frame][bl_y_it][bl_x_it])  
+        residual_matrix[bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, bl_y_it * i, bl_x_it * i, i, mv[frame][bl_y_it][bl_x_it])
+        
+        residual_matrix[bl_y_it][bl_x_it] = calculate_approximate_residual_block(residual_matrix[bl_y_it][bl_x_it])
 
     new_reconstructed = calculate_reconstructed_image(residual_matrix, reconst, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks)
 
     for y_it in range(y_res):
       for x_it in range(x_res):
+        # print((int)(new_reconstructed[y_it][x_it]))
         converted.write(((int)(new_reconstructed[y_it][x_it])).to_bytes(1, byteorder=sys.byteorder))
 
   converted.close()
