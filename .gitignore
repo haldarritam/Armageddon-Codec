@@ -5,3 +5,4 @@ converted.yuv
 __pycache__/
 .vscode
 png/
+temp/

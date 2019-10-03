@@ -4,7 +4,6 @@ import assign1_Q2_main as pre
 
 def motion_vector_estimation(block, reconstructed, r, head_idy, head_idx, ext_y_res, ext_x_res, i):
 
-  extracted = np.empty((i, i))
   best_SAD = 300  # since biggest difference can be 255 (8-Bit image)
   mv = (0,0)
   for y_dir in range(-r, (r + 1)):
@@ -40,73 +39,66 @@ def calculate_residual_block(block, reconstructed, head_idy, head_idx, i, mv):
 
   return residual
 
-def calculate_approximate_residual_block(block):
+def calculate_approximate_residual_block(block, n):
 
   sign_block = np.sign(block)
   abs_block = np.absolute(block)
 
-  abs_block[abs_block == 0] = 2
+  factor = 2**n
 
-  # block_c = np.power(2, np.ceil((np.log(abs_block) / np.log(2))))
-  # block_f = np.power(2, np.floor((np.log(abs_block) / np.log(2))))
+  for y_it in range(abs_block.shape[0]):
+    for x_it in range(abs_block.shape[1]):
 
-  # for y_it in range(abs_block.shape[0]):
-  #   for x_it in range(abs_block.shape[1]):
-      
-  #     floor = abs_block[y_it][x_it] - block_f[y_it][x_it]
-  #     ceil = block_c[y_it][x_it] - abs_block[y_it][x_it]
-      
-  #     if floor < ceil:
-  #       block[y_it][x_it] = block_f[y_it][x_it]
-  #     else:
-  #       block[y_it][x_it] = block_c[y_it][x_it]
-      
-  #     block[y_it][x_it] = block[y_it][x_it] * sign_block[y_it][x_it]
+      remainder = abs_block[y_it][x_it] % factor
 
-  block_f = np.power(2, np.floor((np.log(abs_block) / np.log(2))))
-  block = np.multiply(block_f, sign_block)
+      if (abs_block[y_it][x_it] < factor):
+        abs_block[y_it][x_it] = 0
+
+      elif (remainder < (factor / 2)):
+        abs_block[y_it][x_it] = abs_block[y_it][x_it] - remainder
+
+      else:
+        abs_block[y_it][x_it] = abs_block[y_it][x_it] + factor - remainder
+  
+    block = np.multiply(abs_block, sign_block)
 
   return block
 
+
+def decoder_core(residual_matrix, reconstructed):
+
+  new_reconstructed = np.add(residual_matrix, reconstructed)
+
+  for y_it in range (new_reconstructed.shape[0]):
+    for x_it in range (new_reconstructed.shape[1]):
+      new_reconstructed[y_it][x_it] = max(-255, min(new_reconstructed[y_it][x_it], 255))
+  return new_reconstructed
+
 def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks):
   
-  temp = np.empty((ext_y_res, ext_x_res), dtype=int)
+  conc_res = np.empty((ext_y_res, ext_x_res), dtype=int)
   for bl_y_it in range(n_y_blocks):
     conc = np.concatenate((residual_matrix[bl_y_it][0], residual_matrix[bl_y_it][1]), axis=1)
     for bl_x_it in range(2, n_x_blocks):
       conc = np.concatenate((conc, residual_matrix[bl_y_it][bl_x_it]), axis=1)
     
-    temp[bl_y_it * i : bl_y_it * i + i, :] = conc
+    conc_res[bl_y_it * i : bl_y_it * i + i, :] = conc
 
-  new_reconstructed = np.add(temp, reconstructed)
+  new_reconstructed = decoder_core(conc_res, reconstructed)
 
+  return new_reconstructed, conc_res
 
-  # print(temp[0][3])
-  # print("\n\n\n")
-  # print(reconstructed[0][3])
-  # print("\n\n\n")
-  # print(new_reconstructed[0][3])
-
-  return new_reconstructed
-
-
-if __name__ == "__main__":
-  
-  in_file = "./videos/black_and_white.yuv"
-  out_file = "./videos/averaged.yuv"
-  number_frames = 300
-  y_res = 288
-  x_res = 352
-  i = 8
-  r = 8
+def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res= pre.block(in_file, y_res, x_res, number_frames, i)
 
-  reconst = np.full((y_res, x_res), 128, dtype=int)
+  reconst = np.full((ext_y_res, ext_x_res), 128, dtype=int)
   mv = np.empty((number_frames, n_y_blocks, n_x_blocks, 2), dtype=int)
 
+  conc_residual = np.empty((number_frames, ext_y_res, ext_x_res), dtype=np.int16)
 
-  converted = open("./videos/testing.yuv", "wb")
+
+  converted = open("./videos/encoder_test.yuv", "wb")
 
   for frame in range(number_frames):
 
@@ -125,15 +117,54 @@ if __name__ == "__main__":
       for bl_x_it in range(n_x_blocks):
         residual_matrix[bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, bl_y_it * i, bl_x_it * i, i, mv[frame][bl_y_it][bl_x_it])
         
-        residual_matrix[bl_y_it][bl_x_it] = calculate_approximate_residual_block(residual_matrix[bl_y_it][bl_x_it])
+        residual_matrix[bl_y_it][bl_x_it] = calculate_approximate_residual_block(residual_matrix[bl_y_it][bl_x_it], n)
 
-    new_reconstructed = calculate_reconstructed_image(residual_matrix, reconst, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks)
+    new_reconstructed, conc_residual[frame] = calculate_reconstructed_image(residual_matrix, reconst, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks)
 
     for y_it in range(y_res):
       for x_it in range(x_res):
         # print((int)(new_reconstructed[y_it][x_it]))
         converted.write(((int)(new_reconstructed[y_it][x_it])).to_bytes(1, byteorder=sys.byteorder))
 
+    reconst = new_reconstructed
+
   converted.close()
     
-  np.save("./temp/motion_vectors.npy", mv)
+  np.savez("./temp/motion_vectors.npz", mv=mv)
+  np.savez("./temp/residual_matrix.npz", conc_residual=conc_residual)
+
+
+def decoder():
+
+  mv = np.load("./temp/motion_vectors.npz")['mv']
+  residual_matrix = np.load("./temp/residual_matrix.npz")['conc_residual']
+
+  number_of_frames = residual_matrix.shape[0]
+  ext_y_res = residual_matrix.shape[1]
+  ext_x_res = residual_matrix.shape[2]
+  
+  reconst = np.full((ext_y_res, ext_x_res), 128, dtype=int)
+
+  converted = open("./videos/decoder_test.yuv", "wb")
+
+  for frame in range(200,230):
+
+    print(mv[frame])
+  
+  converted.close()
+
+
+
+if __name__ == "__main__":
+  
+  in_file = "./videos/black_and_white.yuv"
+  out_file = "./videos/averaged.yuv"
+  number_frames = 300
+  y_res = 288
+  x_res = 352
+  i = 16
+  r = 4
+  n = 1
+
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n)
+  decoder()
