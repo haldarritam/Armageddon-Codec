@@ -118,8 +118,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
 
     # Calculate Residual Matrix
     
-    for bl_y_it in range(n_y_blocks) :    
-      for bl_x_it in range(n_x_blocks):
         residual_matrix[frame][bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, bl_y_it * i, bl_x_it * i, i, mv[frame][bl_y_it][bl_x_it])
         
         residual_matrix[frame][bl_y_it][bl_x_it] = calculate_approximate_residual_block(residual_matrix[frame][bl_y_it][bl_x_it], n)
@@ -174,7 +172,7 @@ if __name__ == "__main__":
   
   in_file = "./videos/black_and_white.yuv"
   out_file = "./videos/averaged.yuv"
-  number_frames = 10
+  number_frames = 300
   y_res = 288
   x_res = 352
   i = 64
