@@ -127,6 +127,68 @@ def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext
 
   return new_reconstructed
 
+def differential_encoder_decoder(modes_mv_block, is_p_block, not_first_bl):
+  return_data = 0
+  if (is_p_block):
+    if (not_first_bl):
+      return_data = list(np.array(modes_mv_block[-2]) - np.array(modes_mv_block[-1]))     
+    else:
+      return_data = list(np.array([0,0]) - np.array(modes_mv_block[-1]))      
+
+  else:
+    if (not_first_bl):
+      return_data = modes_mv_block[-2] - modes_mv_block[-1]
+    else:
+      return_data = 0 - modes_mv_block[-1]
+      
+  return [return_data]
+
+def exp_golomb_coding(number):
+  if (number <= 0):
+    return [-2 * number]
+  else:
+    return [(2 * number) - 1]
+
+def scanning(block):
+  i = block.shape[0]
+  scanned = []
+  for k in range(i * 2):
+    for y in range(k+1):
+      x = k - y
+      if ( y < i and x < i ):
+        scanned += [block[y][x]]
+  return scanned
+
+def RLE(data):
+  i = 0
+  rled = []
+  while (i < len(data)):
+    k = i
+    if (data[k]!=0):
+      while (data[k] != 0):
+        if ((k+1) < len(data)):
+          k += 1
+        else:
+          rled += [-(k - i)]
+          rled += data[i: (i + k)]
+          break
+
+      rled += [-(k - i)]
+      rled += data[i: (i + k)]
+      i = k + 1
+
+    else:
+      while (data[k] == 0):
+        if ((k+1) < len(data)):
+          k += 1
+        else:
+          rled += [0]
+          break
+
+      rled += [(k - i)]
+      i = k + 1
+  return rled
+
 ##############################################################################
 ##############################################################################
 
@@ -136,7 +198,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
   reconst = np.full((ext_y_res, ext_x_res), grey, dtype=int)
   modes_mv = []
-  modes_mv_block = []
 
   residual_matrix = np.empty((number_frames, n_y_blocks, n_x_blocks, i, i), dtype=np.int16)
 
@@ -155,11 +216,16 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
     print("Loop of frame: ", frame)
 
+    modes_mv_block = []
+    differentiated_modes_mv_block = []
+    intra_predicted_frame = np.empty((n_y_blocks, n_x_blocks, i, i), dtype=int)
+    
+    is_p_block = frame % i_period
+
     for bl_y_it in range(n_y_blocks) :    
       for bl_x_it in range(n_x_blocks):
 
         predicted_block = np.empty((i, i), dtype=int)
-        is_p_block = frame % i_period
         if (is_p_block):
           # Calculate Motion Vector (inter)
           modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i)
@@ -168,11 +234,11 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
         else:
           # Calculate mode (intra)
-          temp_mode, predicted_block = intra_prediction(bl_y_frame[frame], bl_y_it, bl_x_it)
+          temp_mode, predicted_block = intra_prediction(intra_predicted_frame, bl_y_it, bl_x_it)
           modes_mv_block += temp_mode
 
 
-    # Calculate Residual Matrix
+    #  Calculate Residual Matrix
         residual_matrix[frame][bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], predicted_block)
 
     #  Trans/Quant/Rescaling/InvTrans       
@@ -198,7 +264,22 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
             
         new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, predicted_block)
 
-    modes_mv += [modes_mv_block]
+        intra_predicted_frame[bl_y_it][bl_x_it] = new_reconstructed[bl_y_it][bl_x_it]
+
+        if (is_p_block):
+          differentiated_modes_mv_block += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][0])
+          differentiated_modes_mv_block += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][1])
+        else:
+          differentiated_modes_mv_block += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
+
+        scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
+
+
+    if (is_p_block):
+      differentiated_modes_mv_block.insert(0, 0)
+    else:
+      differentiated_modes_mv_block.insert(0, 1)
+    modes_mv += [differentiated_modes_mv_block]
     
     #  Concatenate
     counter = 0
@@ -216,6 +297,13 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
             converted.write(((int)(conc[i_it][x_it])).to_bytes(1, byteorder=sys.byteorder))
 
     reconst = conc_reconstructed
+
+  # print(modes_mv)
+
+  test = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 1, 2, 1, 2, 0, 3, 3, 3, 0, 3, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+  print(test)
+  print("")
+  print(RLE(test))
 
   converted.close()
     
@@ -261,13 +349,13 @@ if __name__ == "__main__":
   
   in_file = "./videos/black_and_white.yuv"
   out_file = "./videos/encoder_test.yuv"
-  number_frames = 5
+  number_frames = 2
   y_res = 288
   x_res = 352
-  i = 16
+  i = 4
   r = 1
-  QP = 6  # from 0 to (log_2(i) + 7)
-  i_period = 4
+  QP = 0  # from 0 to (log_2(i) + 7)
+  i_period = 7
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
   # decoder(y_res, x_res)
