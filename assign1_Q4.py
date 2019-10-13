@@ -198,45 +198,30 @@ def RLE(data):
   return rled
 
 def I_RLE(data, i):
-    print("Inside")
     qtc_line = []
     elements_per_block = i*i
     counter = 0
     iterat = 0
     while (iterat < len(data)):
-        print(iterat)
         if(data[iterat]<0): #non-zero
             add_index = abs(data[iterat])
-            print('non-zero')
             counter = add_index
-            print('counter=,',counter,' interator = ',iterat)
             qtc_line += data[iterat+1:iterat + add_index + 1]
             counter += 1
-            print('counter =',counter)
-            print(qtc_line)
             iterat += counter
-            print('interator = ',iterat)
         elif(data[iterat]>0): #zero
-            print('zero')
             counter += data[iterat]
             qtc_line += [0]*data[iterat]
-            print(qtc_line)
             iterat +=  1
         else: #end of block
-            print('EoB')
-            print('EoB counter =',counter)
-            print('qtc=',len(qtc_line))
             missing_elements = elements_per_block - len(qtc_line)
             qtc_line += [0]*missing_elements
-            print(qtc_line)
             counter = elements_per_block
             iterat +=  counter + 1
 
 
         if(counter==elements_per_block):
-            print('Equal')
             counter = 0
-    print('Outside')
     return qtc_line
 
 
