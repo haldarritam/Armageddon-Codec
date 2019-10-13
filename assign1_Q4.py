@@ -161,32 +161,40 @@ def scanning(block):
 
 def RLE(data):
   i = 0
+  skip = False
   rled = []
   while (i < len(data)):
     k = i
-    if (data[k]!=0):
+    if (data[k] != 0):
       while (data[k] != 0):
         if ((k+1) < len(data)):
           k += 1
         else:
+          k += 1
           rled += [-(k - i)]
-          rled += data[i: (i + k)]
+          rled += data[i: (i + (k - i))]
+          skip = True
           break
-
+      if (skip):
+        break
       rled += [-(k - i)]
-      rled += data[i: (i + k)]
-      i = k + 1
+      rled += data[i: (i + (k - i))]
+      i = k
 
     else:
       while (data[k] == 0):
         if ((k+1) < len(data)):
           k += 1
         else:
+          k += 1
           rled += [0]
+          skip = True
           break
 
+      if (skip):
+        break
       rled += [(k - i)]
-      i = k + 1
+      i = k
   return rled
 
 ##############################################################################
@@ -197,7 +205,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
   grey = 128
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
   reconst = np.full((ext_y_res, ext_x_res), grey, dtype=int)
-  modes_mv = []
 
   residual_matrix = np.empty((number_frames, n_y_blocks, n_x_blocks, i, i), dtype=np.int16)
 
@@ -211,6 +218,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
 
   converted = open(out_file, "wb")
+  mdiff_file = open("./temp/mdiff.far", "wb")
+  qtc_file = open("./temp/qtc.far", "wb")
 
   for frame in range(number_frames):
 
@@ -273,13 +282,19 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
           differentiated_modes_mv_block += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
 
         scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
+        rled_block = RLE(scanned_block)
+        # qtc_file.write(bytearray(rled_block))
+        for rled in rled_block:
+          qtc_file.write((int)(exp_golomb_coding(rled)[0]).to_bytes(1, byteorder=sys.byteorder, signed=False))
 
 
     if (is_p_block):
       differentiated_modes_mv_block.insert(0, 0)
     else:
       differentiated_modes_mv_block.insert(0, 1)
-    modes_mv += [differentiated_modes_mv_block]
+    # mdiff_file.write(bytearray(differentiated_modes_mv_block))
+    for mdiff in differentiated_modes_mv_block:
+      mdiff_file.write((int)(mdiff).to_bytes(1, byteorder=sys.byteorder, signed=False))
     
     #  Concatenate
     counter = 0
@@ -300,47 +315,63 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
   # print(modes_mv)
 
-  test = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 1, 2, 1, 2, 0, 3, 3, 3, 0, 3, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
-  print(test)
-  print("")
-  print(RLE(test))
-
   converted.close()
-    
-  # np.savez("./temp/motion_vectors.npz", mv=mv)
-  # np.savez("./temp/residual_matrix.npz", residual_matrix=residual_matrix)
+  mdiff_file.close()
+  qtc_file.close()
 
 ##############################################################################
 ##############################################################################
 
 def decoder(y_res, x_res):
 
-  mv = np.load("./temp/motion_vectors.npz")['mv']
-  residual_matrix = np.load("./temp/residual_matrix.npz")['residual_matrix']
+  rled_qtc = []
+  mdiff = []
+  size = 1
+  with open("./temp/qtc.far", 'rb') as file:
+    while True:
+        data = file.read(size)
+        if not data:
+            # eof
+            break
+        rled_qtc += [int.from_bytes(data, byteorder=sys.byteorder, signed=False)]
 
-  number_of_frames = residual_matrix.shape[0]
-  i = residual_matrix.shape[3]
-  ext_y_res = residual_matrix.shape[1] * i
-  ext_x_res = residual_matrix.shape[2] * i
+  with open("./temp/mdiff.far", 'rb') as file:
+    while True:
+        data = file.read(size)
+        if not data:
+            # eof
+            break
+        mdiff += [int.from_bytes(data, byteorder=sys.byteorder, signed=False)]
   
-  reconst = np.full((ext_y_res, ext_x_res), 128, dtype=int)
+  print(rled_qtc)
+  print(mdiff)
 
-  converted = open("./videos/decoder_test.yuv", "wb")
+  # mv = np.load("./temp/motion_vectors.npz")['mv']
+  # residual_matrix = np.load("./temp/residual_matrix.npz")['residual_matrix']
 
-  for frame in range(number_of_frames):
-
-    print(frame)
-
-    new_reconstructed = decoder_core(residual_matrix[frame], reconst, mv[frame])
-
-    for y_it in range(y_res):
-      for x_it in range(x_res):
-
-        converted.write(((int)(new_reconstructed[y_it][x_it])).to_bytes(1, byteorder=sys.byteorder))
-
-    reconst = new_reconstructed
+  # number_of_frames = residual_matrix.shape[0]
+  # i = residual_matrix.shape[3]
+  # ext_y_res = residual_matrix.shape[1] * i
+  # ext_x_res = residual_matrix.shape[2] * i
   
-  converted.close()
+  # reconst = np.full((ext_y_res, ext_x_res), 128, dtype=int)
+
+  # converted = open("./videos/decoder_test.yuv", "wb")
+
+  # for frame in range(number_of_frames):
+
+  #   print(frame)
+
+  #   new_reconstructed = decoder_core(residual_matrix[frame], reconst, mv[frame])
+
+  #   for y_it in range(y_res):
+  #     for x_it in range(x_res):
+
+  #       converted.write(((int)(new_reconstructed[y_it][x_it])).to_bytes(1, byteorder=sys.byteorder))
+
+  #   reconst = new_reconstructed
+  
+  # converted.close()
 
 ##############################################################################
 ##############################################################################
@@ -349,13 +380,13 @@ if __name__ == "__main__":
   
   in_file = "./videos/black_and_white.yuv"
   out_file = "./videos/encoder_test.yuv"
-  number_frames = 2
+  number_frames = 5
   y_res = 288
   x_res = 352
-  i = 4
-  r = 1
-  QP = 0  # from 0 to (log_2(i) + 7)
-  i_period = 7
+  i = 16
+  r = 3
+  QP = 6  # from 0 to (log_2(i) + 7)
+  i_period = 3
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
-  # decoder(y_res, x_res)
+  # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
+  decoder(y_res, x_res)
