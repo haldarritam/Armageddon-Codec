@@ -203,33 +203,40 @@ def I_RLE(data, i):
     elements_per_block = i*i
     counter = 0
     iterat = 0
-    while (iterat< len(data)):
-        #print(iterat)
+    while (iterat < len(data)):
+        print(iterat)
         if(data[iterat]<0): #non-zero
-            counter -= data[iterat]
-            print('counter=, interator = ',counter,iterat)
-            qtc_line += data[iterat+1:iterat + counter+1]
+            add_index = abs(data[iterat])
+            print('non-zero')
+            counter = add_index
+            print('counter=,',counter,' interator = ',iterat)
+            qtc_line += data[iterat+1:iterat + add_index + 1]
             counter += 1
+            print('counter =',counter)
             print(qtc_line)
             iterat += counter
-            print('non-zero')
+            print('interator = ',iterat)
         elif(data[iterat]>0): #zero
+            print('zero')
             counter += data[iterat]
             qtc_line += [0]*data[iterat]
             print(qtc_line)
-            print('zero')
             iterat +=  1
         else: #end of block
-            missing_elements = elements_per_block - counter
+            print('EoB')
+            print('EoB counter =',counter)
+            print('qtc=',len(qtc_line))
+            missing_elements = elements_per_block - len(qtc_line)
             qtc_line += [0]*missing_elements
             print(qtc_line)
             counter = elements_per_block
             iterat +=  counter + 1
-            print('EoB')
+
 
         if(counter==elements_per_block):
+            print('Equal')
             counter = 0
-
+    print('Outside')
     return qtc_line
 
 
@@ -427,6 +434,6 @@ if __name__ == "__main__":
 
   # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
   #decoder(y_res, x_res)
-  result = I_RLE([-3,7,5,2,4,-2,1,2,-4,4,8,12,16,0],4)
+  result = I_RLE([-3,7,5,2,4,-2,1,2,-4,4,8,12,16,0],5)
   print(result)
   print(len(result))
