@@ -197,32 +197,45 @@ def RLE(data):
       i = k
   return rled
 
+def I_golomb(number):
+  if (number % 2):
+    return [(int)((1 + number)/2)]
+  else:
+    return [(int)(-number/2)]
+
 def I_RLE(data, i):
     qtc_line = []
     elements_per_block = i*i
-    counter = 0
     iterat = 0
     while (iterat < len(data)):
         if(data[iterat]<0): #non-zero
             add_index = abs(data[iterat])
-            counter = add_index
             qtc_line += data[iterat+1:iterat + add_index + 1]
-            counter += 1
-            iterat += counter
+            iterat += add_index + 1
         elif(data[iterat]>0): #zero
-            counter += data[iterat]
             qtc_line += [0]*data[iterat]
             iterat +=  1
         else: #end of block
-            missing_elements = elements_per_block - len(qtc_line)
+            missing_elements = elements_per_block - (len(qtc_line) % elements_per_block)
             qtc_line += [0]*missing_elements
-            counter = elements_per_block
-            iterat +=  counter + 1
-
-
-        if(counter==elements_per_block):
-            counter = 0
+            iterat += 1
     return qtc_line
+
+def I_scanning(qtc, number_of_frames, n_y_blocks, n_x_blocks ,i):
+  bl_y_frame = np.empty((number_of_frames, n_y_blocks, n_x_blocks, i, i), dtype=int)
+  lin_it = 0
+  for frames in range(number_of_frames):
+    for bl_y_it in range(n_y_blocks):
+      for bl_x_it in range(n_x_blocks):
+        for k in range(i * 2):
+          for y in range(k+1):
+            x = k - y
+            if (y < i and x < i):
+              # print("frame: %d bl_y:%d bl_x: %d y:%d x:%d lin_it:%d/%d" % (frames, bl_y_it, bl_x_it, y, x,lin_it, (len(qtc) - 1)))
+              bl_y_frame[frames][bl_y_it][bl_x_it][y][x] = qtc[lin_it]
+              lin_it += 1
+  return bl_y_frame
+    
 
 
 
@@ -351,18 +364,40 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 ##############################################################################
 ##############################################################################
 
-def decoder(y_res, x_res):
+def decoder(y_res, x_res, i, i_period):
 
-  rled_qtc = []
+  qtc = []
   mdiff = []
   size = 1
+
+  ########################################
+  # Can be converted to a function
+  ########################################
+  ext_y_res = y_res
+  ext_x_res = x_res
+  total_pixels_frame = x_res * y_res
+  bytes_frame = (int)(total_pixels_frame)
+
+  n_y_blocks =(int)(y_res / i)
+  n_x_blocks = (int)(x_res / i)
+
+  if (y_res % i != 0):
+    n_y_blocks += 1
+    ext_y_res += (i - (y_res % i)) 
+  if (x_res % i != 0):
+    n_x_blocks += 1
+    ext_x_res += (i - (x_res % i)) 
+  ########################################
+  ########################################
+
   with open("./temp/qtc.far", 'rb') as file:
     while True:
         data = file.read(size)
         if not data:
             # eof
             break
-        rled_qtc += [int.from_bytes(data, byteorder=sys.byteorder, signed=False)]
+        # Get RLEd QTC
+        qtc += I_golomb(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
 
   with open("./temp/mdiff.far", 'rb') as file:
     while True:
@@ -370,10 +405,47 @@ def decoder(y_res, x_res):
         if not data:
             # eof
             break
-        mdiff += [int.from_bytes(data, byteorder=sys.byteorder, signed=False)]
+        mdiff += I_golomb(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
 
-  print(rled_qtc)
-  print(mdiff)
+  # Recover QTC Block:
+  # Performing inverse RLE to get scanned QTC
+  qtc = I_RLE(qtc, i)
+
+  number_of_frames = (int)((len(qtc) / (i*i)) / (n_x_blocks * n_y_blocks))
+
+  bl_y_frame = I_scanning(qtc, number_of_frames, n_y_blocks, n_x_blocks, i)
+
+  # Recover modes_mv block:
+  modes_mv = []
+  lin_idx = 0
+  for frame in range(number_of_frames):
+    is_p_block = frame % i_period
+
+    for bl_y_it in range(n_y_blocks):
+      prev_mode = 0
+      prev_mv = [0,0]
+      for bl_x_it in range(n_x_blocks): 
+    
+        if (is_p_block):
+          prev_mv[0] = prev_mv[0] - mdiff[lin_idx]
+          prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
+          modes_mv += [[prev_mv[0], prev_mv[1]]]
+          lin_idx += 2          
+        else:
+          print(prev_mode, mdiff[lin_idx])
+          prev_mode = prev_mode - mdiff[lin_idx]
+          modes_mv += [prev_mode]
+          lin_idx += 1
+
+
+  print(modes_mv)
+
+
+
+
+
+
+  
 
   # mv = np.load("./temp/motion_vectors.npz")['mv']
   # residual_matrix = np.load("./temp/residual_matrix.npz")['residual_matrix']
@@ -418,7 +490,12 @@ if __name__ == "__main__":
   i_period = 3
 
   # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
-  #decoder(y_res, x_res)
-  result = I_RLE([-3,7,5,2,4,-2,1,2,-4,4,8,12,16,0],5)
-  print(result)
-  print(len(result))
+  decoder(y_res, x_res, i, i_period)
+
+
+  # result = [-3,7,5,2,4,-2,1,2,-4,4,8,12,16,0,-4,1,2,3,4,5,-3,1,2,3,0,4,-3,1,2,3,0]
+  # print(result)
+  # print(" ")
+  # result = I_RLE(result,5)
+  # print(result)
+  # print(len(result))
