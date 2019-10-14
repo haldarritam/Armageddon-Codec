@@ -416,10 +416,14 @@ def decoder(y_res, x_res, i, i_period):
   bl_y_frame = I_scanning(qtc, number_of_frames, n_y_blocks, n_x_blocks, i)
 
   # Recover modes_mv block:
+  ########### Convert this into a function ##############
   modes_mv = []
   lin_idx = 0
   for frame in range(number_of_frames):
-    is_p_block = frame % i_period
+    is_p_block = frame % i_period 
+    ####### ATTENTION #######
+    # Shouldn't have i_period here. We need to save the I / P data to the mdiff file!!!
+    #########################
 
     for bl_y_it in range(n_y_blocks):
       prev_mode = 0
@@ -432,13 +436,22 @@ def decoder(y_res, x_res, i, i_period):
           modes_mv += [[prev_mv[0], prev_mv[1]]]
           lin_idx += 2          
         else:
-          print(prev_mode, mdiff[lin_idx])
-          prev_mode = prev_mode - mdiff[lin_idx]
-          modes_mv += [prev_mode]
-          lin_idx += 1
-
+          #print(prev_mode, mdiff[lin_idx])
+          if (mdiff[lin_idx] == 0):
+            modes_mv += [prev_mode]
+          else:
+            if (prev_mode == 0):
+              modes_mv += [1]
+              prev_mode = 1
+            else:
+              modes_mv += [0]
+              prev_mode = 0
+          #prev_mode = prev_mode - mdiff[lin_idx]
+          #modes_mv += [prev_mode]
+          #lin_idx += 1
 
   print(modes_mv)
+
 
 
 
@@ -489,13 +502,5 @@ if __name__ == "__main__":
   QP = 6  # from 0 to (log_2(i) + 7)
   i_period = 3
 
-  # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
+  #encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
   decoder(y_res, x_res, i, i_period)
-
-
-  # result = [-3,7,5,2,4,-2,1,2,-4,4,8,12,16,0,-4,1,2,3,4,5,-3,1,2,3,0,4,-3,1,2,3,0]
-  # print(result)
-  # print(" ")
-  # result = I_RLE(result,5)
-  # print(result)
-  # print(len(result))
