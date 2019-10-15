@@ -242,20 +242,30 @@ def I_RLE(data, i):
             iterat += 1
     return qtc_line
 
-def I_scanning(qtc, number_of_frames, n_y_blocks, n_x_blocks ,i):
-  bl_y_frame = np.empty((number_of_frames, n_y_blocks, n_x_blocks, i, i), dtype=int)
-  lin_it = 0
-  for frames in range(number_of_frames):
-    for bl_y_it in range(n_y_blocks):
-      for bl_x_it in range(n_x_blocks):
-        for k in range(i * 2):
-          for y in range(k+1):
-            x = k - y
-            if (y < i and x < i):
-              # print("frame: %d bl_y:%d bl_x: %d y:%d x:%d lin_it:%d/%d" % (frames, bl_y_it, bl_x_it, y, x,lin_it, (len(qtc) - 1)))
-              bl_y_frame[frames][bl_y_it][bl_x_it][y][x] = qtc[lin_it]
-              lin_it += 1
-  return bl_y_frame
+def I_scanning(qtc, i, lin_it):
+  bl_y_frame = np.empty((i, i), dtype=int)
+  for k in range(i * 2):
+    for y in range(k+1):
+      x = k - y
+      if (y < i and x < i):
+        bl_y_frame[y][x] = qtc[lin_it]
+        lin_it += 1
+  return bl_y_frame, lin_it
+
+# def I_scanning(qtc, number_of_frames, n_y_blocks, n_x_blocks ,i):
+#   bl_y_frame = np.empty((number_of_frames, n_y_blocks, n_x_blocks, i, i), dtype=int)
+#   lin_it = 0
+#   for frames in range(number_of_frames):
+#     for bl_y_it in range(n_y_blocks):
+#       for bl_x_it in range(n_x_blocks):
+#         for k in range(i * 2):
+#           for y in range(k+1):
+#             x = k - y
+#             if (y < i and x < i):
+#               # print("frame: %d bl_y:%d bl_x: %d y:%d x:%d lin_it:%d/%d" % (frames, bl_y_it, bl_x_it, y, x,lin_it, (len(qtc) - 1)))
+#               bl_y_frame[frames][bl_y_it][bl_x_it][y][x] = qtc[lin_it]
+#               lin_it += 1
+#   return bl_y_frame
     
 
 
@@ -316,8 +326,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
         QTC[frame][bl_y_it][bl_x_it] = quantize_dct(transformed_dct, Q)
 
       #  Decode
-        # predicted_block = predict_block(reconst, new_reconstructed, modes_mv_block[-1], bl_y_it, bl_x_it, i, is_p_block)
-
         new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, predicted_block)
 
       # Differential Encoding
@@ -331,6 +339,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
         scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
         rled_block = RLE(scanned_block)
         for rled in rled_block:
+          # print(exp_golomb_coding(rled)[0])
           qtc_file.write((int)(exp_golomb_coding(rled)[0]).to_bytes(1, byteorder=sys.byteorder, signed=False))
 
 
@@ -371,6 +380,7 @@ def decoder(y_res, x_res, i, QP):
   qtc = []
   mdiff = []
   size = 1  # bytes per pixel
+  lin_it = 0
 
   ########################################
   # Can be converted to a function
@@ -418,27 +428,18 @@ def decoder(y_res, x_res, i, QP):
         mdiff += I_golomb(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
 
   # Recover QTC Block:
-  # Performing inverse RLE to get scanned QTC
-  print("Recovering QTC")
-  
+  # Performing inverse RLE to get scanned QTC  
+  print("Performing inverse RLE")
   qtc = I_RLE(qtc, i)
 
   number_of_frames = (int)((len(qtc) / (i*i)) / (n_x_blocks * n_y_blocks))
 
-  QTC_recovered = I_scanning(qtc, number_of_frames, n_y_blocks, n_x_blocks, i)
-
-  # Recover modes_mv block:
-  ########### Convert this into a function ##############
   modes_mv = []
   lin_idx = 0
   
   for frame in range(number_of_frames):
     
     print("Decoding frame: %d" % (frame))
-    
-    ####### ATTENTION #######
-    # Shouldn't have i_period here. We need to save the I / P data to the mdiff file!!!
-    #########################
 
     is_i_frame = mdiff[lin_idx]
     lin_idx += 1
@@ -447,19 +448,12 @@ def decoder(y_res, x_res, i, QP):
     for bl_y_it in range(n_y_blocks):
       prev_mode = 0
       prev_mv = [0,0]
-      for bl_x_it in range(n_x_blocks): 
+      for bl_x_it in range(n_x_blocks):
+
+        # Inverse scanning
+        QTC_recovered, lin_it = I_scanning(qtc, i, lin_it)
              
         if (is_i_frame):
-          # #print(prev_mode, mdiff[lin_idx])
-          # if (mdiff[lin_idx] == 0):
-          #   modes_mv += [prev_mode]
-          # else:
-          #   if (prev_mode == 0):
-          #     modes_mv += [1]
-          #     prev_mode = 1
-          #   else:
-          #     modes_mv += [0]
-          #     prev_mode = 0
           prev_mode = prev_mode - mdiff[lin_idx]
           modes_mv += [prev_mode]
           lin_idx += 1
@@ -473,7 +467,7 @@ def decoder(y_res, x_res, i, QP):
         #  Decode
         predicted_block = predict_block(reconst, new_reconstructed, modes_mv[-1], bl_y_it, bl_x_it, i, (not is_i_frame))
 
-        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered[frame][bl_y_it][bl_x_it], Q, predicted_block)
+        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, predicted_block)
 
     #  Concatenate
     counter = 0
