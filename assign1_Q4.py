@@ -165,10 +165,17 @@ def differential_encoder_decoder(modes_mv_block, is_p_block, not_first_bl):
   return [return_data]
 
 def exp_golomb_coding(number):
+
   if (number <= 0):
-    return [-2 * number]
+    number =  -2 * number
   else:
-    return [(2 * number) - 1]
+    number = (2 * number) - 1
+
+  bitstream = "{0:b}".format(number + 1)
+  bitstream = ('0' * (len(bitstream) - 1)) + bitstream
+
+  return bitstream
+  
 
 def scanning(block):
   i = block.shape[0]
@@ -218,11 +225,33 @@ def RLE(data):
       i = k
   return rled
 
-def I_golomb(number):
-  if (number % 2):
-    return [(int)((1 + number)/2)]
+def _to_Bytes(data):
+  b = bytearray()
+  for i in range(0, len(data), 8):
+    b.append(int(data[i:i+8], 2))
+  return bytes(b)
+
+def write_encoded(bitstream, file):
+  file.write(_to_Bytes(bitstream))
+
+def I_golomb(bitstream, idx):
+  if (int(bitstream[idx]) == 1):
+    idx += 1
+    return 0, idx
+
   else:
-    return [(int)(-number/2)]
+    zero_counter = 0
+    while (int(bitstream[idx]) == 0):
+      zero_counter += 1
+      idx += 1
+
+    number = int(bitstream[idx: idx + zero_counter + 1], 2) - 1
+    idx += zero_counter + 1
+
+  if (number % 2):
+    return (int)((1 + number)/2), idx
+  else:
+    return (int)(-number/2), idx
 
 def I_RLE(data, i):
     qtc_line = []
@@ -250,23 +279,7 @@ def I_scanning(qtc, i, lin_it):
       if (y < i and x < i):
         bl_y_frame[y][x] = qtc[lin_it]
         lin_it += 1
-  return bl_y_frame, lin_it
-
-# def I_scanning(qtc, number_of_frames, n_y_blocks, n_x_blocks ,i):
-#   bl_y_frame = np.empty((number_of_frames, n_y_blocks, n_x_blocks, i, i), dtype=int)
-#   lin_it = 0
-#   for frames in range(number_of_frames):
-#     for bl_y_it in range(n_y_blocks):
-#       for bl_x_it in range(n_x_blocks):
-#         for k in range(i * 2):
-#           for y in range(k+1):
-#             x = k - y
-#             if (y < i and x < i):
-#               # print("frame: %d bl_y:%d bl_x: %d y:%d x:%d lin_it:%d/%d" % (frames, bl_y_it, bl_x_it, y, x,lin_it, (len(qtc) - 1)))
-#               bl_y_frame[frames][bl_y_it][bl_x_it][y][x] = qtc[lin_it]
-#               lin_it += 1
-#   return bl_y_frame
-    
+  return bl_y_frame, lin_it   
 
 
 
@@ -293,12 +306,16 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
   mdiff_file = open("./temp/mdiff.far", "wb")
   qtc_file = open("./temp/qtc.far", "wb")
 
+  differentiated_modes_mv_bitstream = ''
+  qtc_bitstream = ''
+
   for frame in range(number_frames):
+
+    differentiated_modes_mv_frame = ''
 
     print("Loop of frame: ", frame)
 
     modes_mv_block = []
-    differentiated_modes_mv_block = []
 
     is_p_block = frame % i_period
 
@@ -330,26 +347,28 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
       # Differential Encoding
         if (is_p_block):
-          differentiated_modes_mv_block += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][0])
-          differentiated_modes_mv_block += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][1])
+          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][0])
+          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][1])
         else:
-          differentiated_modes_mv_block += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
+          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
 
         # Scanning/RLE/writing (QTC)        
         scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
         rled_block = RLE(scanned_block)
         for rled in rled_block:
-          # print(exp_golomb_coding(rled)[0])
-          qtc_file.write((int)(exp_golomb_coding(rled)[0]).to_bytes(1, byteorder=sys.byteorder, signed=False))
+          # # print(exp_golomb_coding(rled)[0])
+          # qtc_file.write((int)(exp_golomb_coding(rled)[0]).to_bytes(1, byteorder=sys.byteorder, signed=False))
+
+          qtc_bitstream += exp_golomb_coding(rled)
 
 
     # insert i_period data/writing (modes_mv)
     if (is_p_block):
-      differentiated_modes_mv_block.insert(0, 0)
+      differentiated_modes_mv_frame = exp_golomb_coding(0) + differentiated_modes_mv_frame
     else:
-      differentiated_modes_mv_block.insert(0, 1)
-    for mdiff in differentiated_modes_mv_block:
-      mdiff_file.write((int)(mdiff).to_bytes(1, byteorder=sys.byteorder, signed=False))
+      differentiated_modes_mv_frame = exp_golomb_coding(1) + differentiated_modes_mv_frame
+
+    differentiated_modes_mv_bitstream += differentiated_modes_mv_frame
 
     #  Concatenate
     counter = 0
@@ -368,6 +387,20 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
     reconst = conc_reconstructed
 
+  # Padding with 1s to make the number of bits divisible by 8
+  bits_in_a_byte = 8
+  differentiated_modes_mv_bitstream = ('1' * (bits_in_a_byte - (len(differentiated_modes_mv_bitstream) % bits_in_a_byte))) + differentiated_modes_mv_bitstream
+  
+  # Adding the metadata to the qtc
+  # Sequence of metadata -> y_res, x_res, i, QP
+  qtc_bitstream = exp_golomb_coding(y_res) + exp_golomb_coding(x_res) + exp_golomb_coding(i) + exp_golomb_coding(QP) + qtc_bitstream
+
+  # Padding with 1s to make the number of bits divisible by 8
+  qtc_bitstream = ('1' * (bits_in_a_byte - (len(qtc_bitstream) % bits_in_a_byte))) + qtc_bitstream
+
+  write_encoded(differentiated_modes_mv_bitstream, mdiff_file)
+  write_encoded(qtc_bitstream, qtc_file)
+
   converted.close()
   mdiff_file.close()
   qtc_file.close()
@@ -375,12 +408,69 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 ##############################################################################
 ##############################################################################
 
-def decoder(y_res, x_res, i, QP):
+def decoder():
 
   qtc = []
   mdiff = []
-  size = 1  # bytes per pixel
   lin_it = 0
+  size = 1  # bytes per pixel
+  
+  qtc_idx = 0
+  mdiff_idx = 0
+  qtc_encoded_bitstream = ''
+  mdiff_encoded_bitstream = ''
+
+  with open("./temp/qtc.far", 'rb') as file:
+    print("Reading qtc.far")
+    while True:
+        data = file.read(size)
+        if not data:
+            # eof
+            break
+        # Get RLEd QTC
+        byte = "{0:b}".format(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
+
+        byte = ('0' * (8 - len(byte))) + byte
+        
+        qtc_encoded_bitstream += byte
+
+  with open("./temp/mdiff.far", 'rb') as file:
+    print("Reading Mdiff.far")
+    while True:
+        data = file.read(size)
+        if not data:
+            # eof
+            break
+        byte = "{0:b}".format(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
+
+        byte = ('0' * (8 - len(byte))) + byte
+        
+        mdiff_encoded_bitstream += byte
+
+  print("Inverse exp_golomb_coding")
+  # Reading metadata
+  while (int(qtc_encoded_bitstream[qtc_idx]) == 1):
+    qtc_idx += 1
+  
+  y_res, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
+  x_res, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
+  i, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
+  QP, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
+
+  # Reading qtc data
+  while (qtc_idx < len(qtc_encoded_bitstream)):
+    
+    temp, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
+    qtc += [temp]
+
+  # Skipping padded 1s
+  while (int(mdiff_encoded_bitstream[mdiff_idx]) == 1):
+    mdiff_idx += 1
+
+  # Reading mdiff data
+  while (mdiff_idx < len(mdiff_encoded_bitstream)):
+    temp, mdiff_idx = I_golomb(mdiff_encoded_bitstream, mdiff_idx)
+    mdiff += [temp]
 
   ########################################
   # Can be converted to a function
@@ -408,24 +498,6 @@ def decoder(y_res, x_res, i, QP):
   
   decoded = open("./videos/decoder_test.yuv", "wb")
 
-  with open("./temp/qtc.far", 'rb') as file:
-    print("Reading qtc.far")
-    while True:
-        data = file.read(size)
-        if not data:
-            # eof
-            break
-        # Get RLEd QTC
-        qtc += I_golomb(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
-
-  with open("./temp/mdiff.far", 'rb') as file:
-    print("Reading Mdiff.far")
-    while True:
-        data = file.read(size)
-        if not data:
-            # eof
-            break
-        mdiff += I_golomb(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
 
   # Recover QTC Block:
   # Performing inverse RLE to get scanned QTC  
@@ -503,5 +575,5 @@ if __name__ == "__main__":
   QP = 6  # from 0 to (log_2(i) + 7)
   i_period = 30
 
-  # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
-  decoder(y_res, x_res, i, QP)
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
+  decoder()
