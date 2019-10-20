@@ -1,6 +1,11 @@
 import numpy as np
 import sys
 
+def progress(message, current, total):
+  progress = (int) (current / (total - 1) * 100)
+  sys.stdout.write(message + " %d%%   \r" % (progress) )
+  sys.stdout.flush()
+
 def block(file, y_res, x_res, number_frames, i):
   ext_y_res = y_res
   ext_x_res = x_res
@@ -21,7 +26,7 @@ def block(file, y_res, x_res, number_frames, i):
 
   y_file = open(file,"rb")
   for frame in range(number_frames):
-    print ("Blocking: ", frame)
+    progress("Blocking frames: ", frame, number_frames)
     raw = y_file.read(bytes_frame)
 
     for bl_y_it in range(n_y_blocks) :    
@@ -40,7 +45,7 @@ def block(file, y_res, x_res, number_frames, i):
 
 def average(bl_y_frame, number_frames, n_y_blocks, n_x_blocks, out_file):
   for frame in range(number_frames):
-    print("Averaging: ", frame)
+    progress("Averaging frames: ", frame, number_frames)
     for bl_y_it in range(n_y_blocks) :    
       for bl_x_it in range(n_x_blocks):
         mean = [np.round(np.mean(bl_y_frame[frame][bl_y_it][bl_x_it]))]
@@ -50,7 +55,7 @@ def average(bl_y_frame, number_frames, n_y_blocks, n_x_blocks, out_file):
 
   for frame in range(number_frames):
     counter = 0
-    print("Saving: ", frame)
+    progress("Saving averaged: ", frame, number_frames)
     for bl_y_it in range(n_y_blocks):
       conc = np.concatenate((bl_y_frame[frame][bl_y_it][0], bl_y_frame[frame][bl_y_it][1]), axis=1)   
       for bl_x_it in range(2, n_x_blocks):

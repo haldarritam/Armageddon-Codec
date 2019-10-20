@@ -74,7 +74,7 @@ def intra_prediction(frame, y_idx, x_idx):
 
   return [mode], left_edge_block
 
-def extract_block(block, head_idy, head_idx, mv):
+def extract_block(block, head_idy, head_idx, mv, i):
   extracted = block[head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
 
   return extracted
@@ -131,7 +131,7 @@ def predict_block(reconst, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, is_
   grey = 128
   predicted_block = np.empty((i, i), dtype=int)
   if(is_p_block):
-          predicted_block = extract_block(reconst, bl_y_it * i, bl_x_it * i, modes_mv)
+          predicted_block = extract_block(reconst, bl_y_it * i, bl_x_it * i, modes_mv, i)
   else:
     top_edge = np.full((1, i), grey)
     left_edge = np.full((i, 1), grey)
@@ -288,6 +288,21 @@ def I_scanning(qtc, i, lin_it):
 
 def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
+  print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("Q4 Encoder Parameters-")
+  print("----------------------------------------------")
+  print("in_file: ", in_file)
+  print("out_file: ", out_file)
+  print("number_frames: ", number_frames)
+  print("y_res: ", y_res)
+  print("x_res: ", x_res)
+  print("i: ", i)
+  print("r: ", r)
+  print("QP: ", QP)
+  print("i_period: ", i_period)
+  print("----------------------------------------------")
+
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
   reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
 
@@ -301,10 +316,12 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
   new_reconstructed = np.empty((n_y_blocks, n_x_blocks, i, i), dtype = int)
 
+  file_and_extension = out_file.split(".")
+  converted_name = ".".join(file_and_extension[:-1]) + ".yuv"
+  encoded_name = ".".join(file_and_extension[:-1]) + ".far"
 
-  converted = open(out_file, "wb")
-  mdiff_file = open("./temp/mdiff.far", "wb")
-  qtc_file = open("./temp/qtc.far", "wb")
+  converted = open(converted_name, "wb")
+  encoded_file = open(encoded_name, "wb")
 
   differentiated_modes_mv_bitstream = ''
   qtc_bitstream = ''
@@ -313,7 +330,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
     differentiated_modes_mv_frame = ''
 
-    print("Loop of frame: ", frame)
+    pre.progress("Encoding frames: ", frame, number_frames)
 
     modes_mv_block = []
 
@@ -327,7 +344,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
           # Calculate Motion Vector (inter)
           modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i)
 
-          predicted_block = extract_block(reconst, bl_y_it * i, bl_x_it * i, modes_mv_block[-1])
+          predicted_block = extract_block(reconst, bl_y_it * i, bl_x_it * i, modes_mv_block[-1], i)
 
         else:
           # Calculate mode (intra)
@@ -356,9 +373,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
         scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
         rled_block = RLE(scanned_block)
         for rled in rled_block:
-          # # print(exp_golomb_coding(rled)[0])
-          # qtc_file.write((int)(exp_golomb_coding(rled)[0]).to_bytes(1, byteorder=sys.byteorder, signed=False))
-
           qtc_bitstream += exp_golomb_coding(rled)
 
 
@@ -389,26 +403,26 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
   # Padding with 1s to make the number of bits divisible by 8
   bits_in_a_byte = 8
-  differentiated_modes_mv_bitstream = ('1' * (bits_in_a_byte - (len(differentiated_modes_mv_bitstream) % bits_in_a_byte))) + differentiated_modes_mv_bitstream
-  
-  # Adding the metadata to the qtc
-  # Sequence of metadata -> y_res, x_res, i, QP
-  qtc_bitstream = exp_golomb_coding(y_res) + exp_golomb_coding(x_res) + exp_golomb_coding(i) + exp_golomb_coding(QP) + qtc_bitstream
+  bits_in_mdiff = len(differentiated_modes_mv_bitstream)
+
+  differentiated_modes_mv_bitstream = exp_golomb_coding(y_res) + exp_golomb_coding(x_res) + exp_golomb_coding(i) + exp_golomb_coding(QP) + exp_golomb_coding(bits_in_mdiff) + differentiated_modes_mv_bitstream
+
+  final_bitstream = differentiated_modes_mv_bitstream + qtc_bitstream
 
   # Padding with 1s to make the number of bits divisible by 8
-  qtc_bitstream = ('1' * (bits_in_a_byte - (len(qtc_bitstream) % bits_in_a_byte))) + qtc_bitstream
+  final_bitstream = ('1' * (bits_in_a_byte - (len(final_bitstream) % bits_in_a_byte))) + final_bitstream
 
-  write_encoded(differentiated_modes_mv_bitstream, mdiff_file)
-  write_encoded(qtc_bitstream, qtc_file)
+  write_encoded(final_bitstream, encoded_file)
 
   converted.close()
-  mdiff_file.close()
-  qtc_file.close()
+  encoded_file.close()
+
+  print("Encoding Completed")
 
 ##############################################################################
 ##############################################################################
 
-def decoder():
+def decoder(in_file, out_file):
 
   qtc = []
   mdiff = []
@@ -417,11 +431,11 @@ def decoder():
   
   qtc_idx = 0
   mdiff_idx = 0
-  qtc_encoded_bitstream = ''
-  mdiff_encoded_bitstream = ''
+  encoded_idx = 0
+  encoded_bitstream = ''
 
-  with open("./temp/qtc.far", 'rb') as file:
-    print("Reading qtc.far")
+  with open(in_file, 'rb') as file:
+    print("Reading " + in_file)
     while True:
         data = file.read(size)
         if not data:
@@ -432,30 +446,33 @@ def decoder():
 
         byte = ('0' * (8 - len(byte))) + byte
         
-        qtc_encoded_bitstream += byte
+        encoded_bitstream += byte
 
-  with open("./temp/mdiff.far", 'rb') as file:
-    print("Reading Mdiff.far")
-    while True:
-        data = file.read(size)
-        if not data:
-            # eof
-            break
-        byte = "{0:b}".format(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
-
-        byte = ('0' * (8 - len(byte))) + byte
-        
-        mdiff_encoded_bitstream += byte
-
-  print("Inverse exp_golomb_coding")
   # Reading metadata
-  while (int(qtc_encoded_bitstream[qtc_idx]) == 1):
-    qtc_idx += 1
+  while (int(encoded_bitstream[encoded_idx]) == 1):
+    encoded_idx += 1
   
-  y_res, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
-  x_res, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
-  i, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
-  QP, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
+  y_res, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
+  x_res, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
+  i, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
+  QP, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)  
+
+  print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("Q4 Decoder Parameters-")
+  print("----------------------------------------------")
+  print("in_file: ", in_file)
+  print("out_file: ", out_file)
+  print("y_res: ", y_res)
+  print("x_res: ", x_res)
+  print("i: ", i)
+  print("QP: ", QP)
+  print("----------------------------------------------")
+
+  bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
+  mdiff_encoded_bitstream = encoded_bitstream[encoded_idx: encoded_idx + bits_in_mdiff]
+  qtc_encoded_bitstream = encoded_bitstream[encoded_idx + bits_in_mdiff: ]
+
 
   # Reading qtc data
   while (qtc_idx < len(qtc_encoded_bitstream)):
@@ -496,12 +513,10 @@ def decoder():
   reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
   new_reconstructed = np.empty((n_y_blocks, n_x_blocks, i, i), dtype=int)
   
-  decoded = open("./videos/decoder_test.yuv", "wb")
-
+  decoded = open(out_file, "wb")
 
   # Recover QTC Block:
   # Performing inverse RLE to get scanned QTC  
-  print("Performing inverse RLE")
   qtc = I_RLE(qtc, i)
 
   number_of_frames = (int)((len(qtc) / (i*i)) / (n_x_blocks * n_y_blocks))
@@ -511,7 +526,7 @@ def decoder():
   
   for frame in range(number_of_frames):
     
-    print("Decoding frame: %d" % (frame))
+    pre.progress("Decoding frames: ", frame, number_of_frames)
 
     is_i_frame = mdiff[lin_idx]
     lin_idx += 1
@@ -559,6 +574,7 @@ def decoder():
     reconst = conc_reconstructed
 
   decoded.close()
+  print("Decoding Completed")
 
 ##############################################################################
 ##############################################################################
@@ -566,8 +582,9 @@ def decoder():
 if __name__ == "__main__":
 
   in_file = "./videos/black_and_white.yuv"
-  out_file = "./videos/encoder_test.yuv"
-  number_frames = 300
+  out_file = "./temp/q4_encoded.far"
+
+  number_frames = 10
   y_res = 288
   x_res = 352
   i = 16
@@ -575,5 +592,8 @@ if __name__ == "__main__":
   QP = 6  # from 0 to (log_2(i) + 7)
   i_period = 30
 
+  decoder_infile = out_file
+  decoder_outfile = "./videos/q4_decoded.yuv"
+
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
-  decoder()
+  decoder(decoder_infile, decoder_outfile)

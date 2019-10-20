@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import assign1_Q2_main as pre
 
+
 def motion_vector_estimation(block, reconstructed, r, head_idy, head_idx, ext_y_res, ext_x_res, i):
 
   best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1) 
@@ -95,6 +96,20 @@ def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext
 
 def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
 
+  print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("Q3 Encoder Parameters-")
+  print("----------------------------------------------")
+  print("in_file: ", in_file)
+  print("out_file: ", out_file)
+  print("number_frames: ", number_frames)
+  print("y_res: ", y_res)
+  print("x_res: ", x_res)
+  print("i: ", i)
+  print("r: ", r)
+  print("n: ", n)
+  print("----------------------------------------------")
+
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res= pre.block(in_file, y_res, x_res, number_frames, i)
 
   reconst = np.full((ext_y_res, ext_x_res), 128, dtype=int)
@@ -103,11 +118,15 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
   residual_matrix = np.empty((number_frames, n_y_blocks,n_x_blocks, i, i), dtype=np.int16)
 
 
-  converted = open("./videos/encoder_test.yuv", "wb")
+  file_and_extension = out_file.split(".")
+  converted_name = ".".join(file_and_extension[:-1]) + ".yuv"
+  encoded_name = ".".join(file_and_extension[:-1]) + ".npz"
+
+  converted = open(converted_name, "wb")
 
   for frame in range(number_frames):
 
-    print("Loop of frame: ", frame)
+    pre.progress("Encoding frames: ", frame, number_frames)
 
   # Calculate Motion Vector
     for bl_y_it in range(n_y_blocks) :    
@@ -133,27 +152,40 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
 
   converted.close()
     
-  np.savez("./temp/motion_vectors.npz", mv=mv)
-  np.savez("./temp/residual_matrix.npz", residual_matrix=residual_matrix)
+  np.savez(encoded_name, mv=mv, residual_matrix=residual_matrix, y_res=y_res, x_res=x_res)
+  print("Encoding Completed")
 
 
-def decoder(y_res, x_res):
+def decoder(in_file, out_file):
 
-  mv = np.load("./temp/motion_vectors.npz")['mv']
-  residual_matrix = np.load("./temp/residual_matrix.npz")['residual_matrix']
+  mv = np.load(in_file)['mv']
+  residual_matrix = np.load(in_file)['residual_matrix']
+  y_res = np.load(in_file)['y_res']
+  x_res = np.load(in_file)['x_res']
 
   number_of_frames = residual_matrix.shape[0]
   i = residual_matrix.shape[3]
   ext_y_res = residual_matrix.shape[1] * i
   ext_x_res = residual_matrix.shape[2] * i
+
+  print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("Q3 Decoder Parameters-")
+  print("----------------------------------------------")
+  print("in_file: ", in_file)
+  print("out_file: ", out_file)
+  print("y_res: ", y_res)
+  print("x_res: ", x_res)
+  print("i: ", i)
+  print("----------------------------------------------")
   
   reconst = np.full((ext_y_res, ext_x_res), 128, dtype=int)
 
-  converted = open("./videos/decoder_test.yuv", "wb")
+  converted = open(out_file, "wb")
 
   for frame in range(number_of_frames):
 
-    print(frame)
+    pre.progress("Decoding frames: ", frame, number_of_frames)
 
     new_reconstructed = decoder_core(residual_matrix[frame], reconst, mv[frame])
 
@@ -165,14 +197,17 @@ def decoder(y_res, x_res):
     reconst = new_reconstructed
   
   converted.close()
+  print("Decoding Completed")
 
 
 
 if __name__ == "__main__":
   
   in_file = "./videos/black_and_white.yuv"
-  out_file = "./videos/averaged.yuv"
-  number_frames = 300
+  out_file = "./temp/q3_encoded.npz"
+  decoder_in = "./temp/q3_encoded.npz"
+  decoder_out = "./videos/q3_decoded.yuv"
+  number_frames = 10
   y_res = 288
   x_res = 352
   i = 64
@@ -180,4 +215,4 @@ if __name__ == "__main__":
   n = 4
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n)
-  decoder(y_res, x_res)
+  decoder(decoder_in, decoder_out)
