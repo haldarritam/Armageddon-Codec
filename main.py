@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
   parser.add_argument('-out', help='Output file location.', type=str, metavar='...', required=True)  
 
-  parser.add_argument('-o', help='Operation: (encode) or (decode)', default='encode', type=str, choices=['encode', 'decode'])
+  parser.add_argument('-o', help='Operation: (encode) or (decode) or (both)', default='encode', type=str, choices=['encode', 'decode', 'both'])
   
   parser.add_argument('-q', help='Question number.', default=4, type=int, choices=[3, 4], metavar='default=4')
   
@@ -56,11 +56,26 @@ if __name__ == "__main__":
   if (q == 4):
     if (operation == 'encode'):
       q4_encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
-    else:
+    elif (operation == 'decode'):
       q4_decoder(in_file, out_file)
+    else:
+      file_and_extension = out_file.split(".")
+      encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.far"
+      decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
+
+      q4_encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, QP, i_period)
+      q4_decoder(encoded_name, decoded_name)
+
 
   elif (q == 3):
     if (operation == 'encode'):
       q3_encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n)
-    else:
+    elif (operation == 'decode'):
       q3_decoder(in_file, out_file)
+    else:
+      file_and_extension = out_file.split(".")
+      encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.npz"
+      decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
+
+      q3_encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, n)
+      q3_decoder(encoded_name, decoded_name)

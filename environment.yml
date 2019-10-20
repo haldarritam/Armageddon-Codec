@@ -4,5 +4,6 @@ dependencies:
   - pip
   - numpy
   - scipy
+  - matplotlib
   - pip:
     - pypng==0.0.20

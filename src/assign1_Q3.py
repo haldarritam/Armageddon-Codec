@@ -206,13 +206,13 @@ if __name__ == "__main__":
   in_file = "./videos/black_and_white.yuv"
   out_file = "./temp/q3_encoded.npz"
   decoder_in = "./temp/q3_encoded.npz"
-  decoder_out = "./videos/q3_decoded.yuv"
+  decoder_out = "./videos/q3_decoded_i64.yuv"
   number_frames = 10
   y_res = 288
   x_res = 352
   i = 64
-  r = 1
-  n = 4
+  r = 4
+  n = 3
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n)
   decoder(decoder_in, decoder_out)
