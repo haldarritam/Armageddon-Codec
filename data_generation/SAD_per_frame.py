@@ -151,11 +151,11 @@ if __name__ == "__main__":
   for ip in [1, 4, 10]:
     psnr_temp = []
     file_size_temp = []
-    for QP in range(0, 11):
-      in_file_2 = "./videos/report/q4/i8/q4_ip" + str(ip) + "_qp" + str(QP) + "_decoded.yuv"
+    for QP in range(0, 12):
+      in_file_2 = "./videos/report/q4/i16/q4_ip" + str(ip) + "_qp" + str(QP) + "_decoded.yuv"
       psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
 
-      encoded_in_file_2 = "./videos/report/q4/i8/q4_ip" + str(ip) + "_qp" + str(QP) + "_encoded.far"
+      encoded_in_file_2 = "./videos/report/q4/i16/q4_ip" + str(ip) + "_qp" + str(QP) + "_encoded.far"
       file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
 
     psnr += [psnr_temp]
