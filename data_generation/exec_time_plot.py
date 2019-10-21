@@ -30,6 +30,7 @@ i16_ip10_dec = [4.406848, 3.933918, 3.597692, 3.422042, 2.982772, 2.753448, 2.66
 QP1 = range(1,12)
 QP2 = range(1,13)
 fig, ax = plt.subplots()
+fig2, ax2 = plt.subplots()
 
 ax.plot(QP1, i8_ip1_enc,  label='Encoder: i=8, I_Period=1')
 ax.plot(QP2, i16_ip1_enc, '--', label='Encoder: i=16, I_Period=1')
@@ -40,21 +41,25 @@ ax.plot(QP2, i16_ip4_enc, '--', label='Encoder: i=16, I_Period=4')
 ax.plot(QP1, i8_ip10_enc, label='Encoder: i=8, I_Period=10')
 ax.plot(QP2, i16_ip10_enc, '--', label='Encoder: i=16, I_Period=10')
 
-ax.plot(QP1, i8_ip1_dec,  label='Decoder: i=8, I_Period=1')
-ax.plot(QP2, i16_ip1_dec, '--', label='Decoder: i=16, I_Period=1')
+ax2.plot(QP1, i8_ip1_dec,  label='Decoder: i=8, I_Period=1')
+ax2.plot(QP2, i16_ip1_dec, '--', label='Decoder: i=16, I_Period=1')
 
-ax.plot(QP1, i8_ip4_dec,  label='Decoder: i=8, I_Period=4')
-ax.plot(QP2, i16_ip4_dec, '--', label='Decoder: i=16, I_Period=4')
+ax2.plot(QP1, i8_ip4_dec,  label='Decoder: i=8, I_Period=4')
+ax2.plot(QP2, i16_ip4_dec, '--', label='Decoder: i=16, I_Period=4')
 
-ax.plot(QP1, i8_ip10_dec, label='Decoder: i=8, I_Period=10')
-ax.plot(QP2, i16_ip10_dec, '--', label='Decoder: i=16, I_Period=10')
-
-
+ax2.plot(QP1, i8_ip10_dec, label='Decoder: i=8, I_Period=10')
+ax2.plot(QP2, i16_ip10_dec, '--', label='Decoder: i=16, I_Period=10')
 
 
-ax.set(xlabel='Quanization Parameter', ylabel='Exectution Time (s)')
+
+
+ax.set(xlabel='Quanization Parameter', ylabel='Execution Time (s)')
 ax.grid()
 ax.legend()
+
+ax2.set(xlabel='Quanization Parameter', ylabel='Execution Time (s)')
+ax2.grid()
+ax2.legend()
 
 # fig.savefig("test.png")
 plt.show()
