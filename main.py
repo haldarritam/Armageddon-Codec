@@ -1,4 +1,5 @@
 import sys
+import time
 import argparse
 sys.path.insert(1, './src')
 
@@ -63,8 +64,13 @@ if __name__ == "__main__":
       encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.far"
       decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
 
+      start = time.time()
       q4_encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, QP, i_period)
+      encoder_end = time.time()
       q4_decoder(encoded_name, decoded_name)
+      decoder_end = time.time()
+
+      print("Encoder Time: %f | Decoder Time: %f" % ((encoder_end-start), (decoder_end-encoder_end)))
 
 
   elif (q == 3):

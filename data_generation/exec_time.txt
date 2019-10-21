@@ -1,0 +1,89 @@
+i = 8
+
+Encoder Time: 7.095863 | Decoder Time: 4.831688  
+Encoder Time: 6.811849 | Decoder Time: 4.453899  
+Encoder Time: 6.716910 | Decoder Time: 4.295692 
+Encoder Time: 6.159437 | Decoder Time: 3.801548  
+Encoder Time: 5.989822 | Decoder Time: 3.516679  
+Encoder Time: 5.496779 | Decoder Time: 3.297407  
+Encoder Time: 5.578129 | Decoder Time: 3.294598  
+Encoder Time: 5.385789 | Decoder Time: 3.199596  
+Encoder Time: 5.330155 | Decoder Time: 3.131066  
+Encoder Time: 5.402611 | Decoder Time: 3.090531 
+Encoder Time: 5.341840 | Decoder Time: 3.040156
+   
+####################################################
+
+Encoder Time: 9.346238 | Decoder Time: 4.898948   
+Encoder Time: 8.684686 | Decoder Time: 4.457229   
+Encoder Time: 8.214455 | Decoder Time: 3.946834  
+Encoder Time: 7.836509 | Decoder Time: 3.644953  
+Encoder Time: 7.531585 | Decoder Time: 3.420963  
+Encoder Time: 7.512032 | Decoder Time: 3.297593  
+Encoder Time: 7.348168 | Decoder Time: 3.425447  
+Encoder Time: 7.167685 | Decoder Time: 3.152721  
+Encoder Time: 7.182156 | Decoder Time: 3.059385  
+Encoder Time: 7.096696 | Decoder Time: 3.062222   
+Encoder Time: 7.356985 | Decoder Time: 3.089406
+  
+###################################################
+
+Encoder Time: 9.833083 | Decoder Time:  4.975857   
+Encoder Time: 10.928773 | Decoder Time: 4.539549  
+Encoder Time: 11.866427 | Decoder Time: 4.967398  
+Encoder Time: 9.581989 | Decoder Time:  3.933239  
+Encoder Time: 8.476104 | Decoder Time:  3.553511  
+Encoder Time: 7.913130 | Decoder Time:  3.364416  
+Encoder Time: 7.709564 | Decoder Time:  3.182163   
+Encoder Time: 7.665276 | Decoder Time:  3.167860   
+Encoder Time: 8.114627 | Decoder Time:  3.158796   
+Encoder Time: 7.950588 | Decoder Time:  3.220578  
+Encoder Time: 7.779637 | Decoder Time:  3.026546
+
+
+################################################################################
+
+i = 16
+  
+Encoder Time: 5.916057 | Decoder Time: 4.115422  
+Encoder Time: 5.655825 | Decoder Time: 3.964580   
+Encoder Time: 5.310968 | Decoder Time: 3.624101  
+Encoder Time: 4.953566 | Decoder Time: 3.258411  
+Encoder Time: 4.695443 | Decoder Time: 3.069642  
+Encoder Time: 4.338262 | Decoder Time: 2.836904  
+Encoder Time: 4.206210 | Decoder Time: 2.671119  
+Encoder Time: 4.135810 | Decoder Time: 2.559200  
+Encoder Time: 4.152536 | Decoder Time: 2.587797  
+Encoder Time: 4.048150 | Decoder Time: 2.519335  
+Encoder Time: 4.054644 | Decoder Time: 2.457990 
+Encoder Time: 4.141344 | Decoder Time: 2.650610
+  
+###################################################
+
+Encoder Time: 6.727915 | Decoder Time: 4.354441   
+Encoder Time: 6.246035 | Decoder Time: 3.954904  
+Encoder Time: 5.742886 | Decoder Time: 3.628654  
+Encoder Time: 5.395097 | Decoder Time: 3.244376  
+Encoder Time: 5.134024 | Decoder Time: 2.980144  
+Encoder Time: 4.966204 | Decoder Time: 2.888723  
+Encoder Time: 4.762424 | Decoder Time: 2.717497  
+Encoder Time: 4.620215 | Decoder Time: 2.552757  
+Encoder Time: 4.560052 | Decoder Time: 2.526838   
+Encoder Time: 5.046310 | Decoder Time: 2.670423  
+Encoder Time: 4.644038 | Decoder Time: 2.538858 
+Encoder Time: 4.695003 | Decoder Time: 2.560450
+   
+###################################################
+
+Encoder Time: 7.002779 | Decoder Time: 4.406848  
+Encoder Time: 6.426071 | Decoder Time: 3.933918   
+Encoder Time: 6.139863 | Decoder Time: 3.597692  
+Encoder Time: 5.774167 | Decoder Time: 3.422042  
+Encoder Time: 5.284196 | Decoder Time: 2.982772  
+Encoder Time: 4.988479 | Decoder Time: 2.753448  
+Encoder Time: 4.881422 | Decoder Time: 2.668130  
+Encoder Time: 4.795008 | Decoder Time: 2.557224   
+Encoder Time: 4.739584 | Decoder Time: 2.580920  
+Encoder Time: 4.724886 | Decoder Time: 2.563756 
+Encoder Time: 4.837565 | Decoder Time: 2.543887  
+Encoder Time: 4.893063 | Decoder Time: 2.703247
