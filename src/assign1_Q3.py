@@ -40,6 +40,13 @@ def calculate_residual_block(block, reconstructed, head_idy, head_idx, i, mv):
 
   return residual
 
+def calculate_no_motion_comp_residual_block(block, reconstructed, head_idy, head_idx, i):
+  extracted = np.empty((i, i))
+  extracted = reconstructed[head_idy : head_idy + i, head_idx : head_idx + i]
+  residual = np.subtract(block, extracted)
+
+  return residual
+
 def calculate_approximate_residual_block(block, n):
 
   sign_block = np.sign(block)
@@ -94,6 +101,24 @@ def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext
 
   return new_reconstructed
 
+def concatinate_and_write(ext_y_res, ext_x_res, y_res, x_res, n_y_blocks, n_x_blocks, input_frame, output_file):
+  #  Concatenate
+  counter = 0
+  conc_reconstructed = np.empty((ext_y_res, ext_x_res), dtype = int)
+  for bl_y_it in range(n_y_blocks):
+    conc = np.concatenate((input_frame[bl_y_it][0], input_frame[bl_y_it][1]), axis=1)
+    for bl_x_it in range(2, n_x_blocks):
+      conc = np.concatenate((conc, input_frame[bl_y_it][bl_x_it]), axis=1)
+    # Write frame (decoder output video)
+    for i_it in range(i):
+      if (counter < y_res):
+        counter += 1
+        for x_it in range(x_res):
+          conc_reconstructed[bl_y_it*i + i_it][x_it] = conc[i_it][x_it]
+          output_file.write(((int)(max(0, min(conc[i_it][x_it], 255)))).to_bytes(1, byteorder=sys.byteorder))
+
+  return conc_reconstructed
+
 def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
 
   print("----------------------------------------------")
@@ -116,13 +141,19 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
   mv = np.empty((number_frames, n_y_blocks, n_x_blocks, 2), dtype=int)
 
   residual_matrix = np.empty((number_frames, n_y_blocks,n_x_blocks, i, i), dtype=np.int16)
+  
+  no_motion_comp_residual_matrix = np.empty((number_frames, n_y_blocks,n_x_blocks, i, i), dtype=np.int16)
 
 
   file_and_extension = out_file.split(".")
   converted_name = ".".join(file_and_extension[:-1]) + ".yuv"
   encoded_name = ".".join(file_and_extension[:-1]) + ".npz"
+  # no_motion_comp_name = ".".join(file_and_extension[:-1]) + "_no_motion_comp.yuv"
+  # motion_comp_name = ".".join(file_and_extension[:-1]) + "_motion_comp.yuv"
 
   converted = open(converted_name, "wb")
+  # no_motion_comp = open(no_motion_comp_name, "wb")
+  # motion_comp = open(motion_comp_name, "wb")
 
   for frame in range(number_frames):
 
@@ -139,9 +170,17 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
     
         residual_matrix[frame][bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, bl_y_it * i, bl_x_it * i, i, mv[frame][bl_y_it][bl_x_it])
         
+        # no_motion_comp_residual_matrix[frame][bl_y_it][bl_x_it] = calculate_no_motion_comp_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, bl_y_it * i, bl_x_it * i, i)
+        
         residual_matrix[frame][bl_y_it][bl_x_it] = calculate_approximate_residual_block(residual_matrix[frame][bl_y_it][bl_x_it], n)
+        
+        # no_motion_comp_residual_matrix[frame][bl_y_it][bl_x_it] = calculate_approximate_residual_block(no_motion_comp_residual_matrix[frame][bl_y_it][bl_x_it], n)
 
     new_reconstructed = decoder_core(residual_matrix[frame], reconst, mv[frame])
+
+    # concatinate_and_write(ext_y_res, ext_x_res, y_res, x_res, n_y_blocks, n_x_blocks, no_motion_comp_residual_matrix[frame], no_motion_comp)
+    
+    # concatinate_and_write(ext_y_res, ext_x_res, y_res, x_res, n_y_blocks, n_x_blocks, residual_matrix[frame], motion_comp)
 
     for y_it in range(y_res):
       for x_it in range(x_res):
@@ -151,6 +190,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
     reconst = new_reconstructed
 
   converted.close()
+  # no_motion_comp.close()
+  # motion_comp.close()
     
   np.savez(encoded_name, mv=mv, residual_matrix=residual_matrix, y_res=y_res, x_res=x_res)
   print("Encoding Completed")
@@ -212,7 +253,7 @@ if __name__ == "__main__":
   x_res = 352
   i = 64
   r = 4
-  n = 3
+  n = 2
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n)
   decoder(decoder_in, decoder_out)
