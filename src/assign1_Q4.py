@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import matplotlib.pyplot as plt
 import assign1_Q2_main as pre
 from scipy.fftpack import dct, idct
 
@@ -288,20 +289,20 @@ def I_scanning(qtc, i, lin_it):
 
 def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
-  print("----------------------------------------------")
-  print("----------------------------------------------")
-  print("Q4 Encoder Parameters-")
-  print("----------------------------------------------")
-  print("in_file: ", in_file)
-  print("out_file: ", out_file)
-  print("number_frames: ", number_frames)
-  print("y_res: ", y_res)
-  print("x_res: ", x_res)
-  print("i: ", i)
-  print("r: ", r)
-  print("QP: ", QP)
-  print("i_period: ", i_period)
-  print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("Q4 Encoder Parameters-")
+  # print("----------------------------------------------")
+  # print("in_file: ", in_file)
+  # print("out_file: ", out_file)
+  # print("number_frames: ", number_frames)
+  # print("y_res: ", y_res)
+  # print("x_res: ", x_res)
+  # print("i: ", i)
+  # print("r: ", r)
+  # print("QP: ", QP)
+  # print("i_period: ", i_period)
+  # print("----------------------------------------------")
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
   reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
@@ -326,9 +327,13 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
   differentiated_modes_mv_bitstream = ''
   qtc_bitstream = ''
 
+  len_of_frame = []
+
   for frame in range(number_frames):
 
     differentiated_modes_mv_frame = ''
+
+    bits_in_frame = ''
 
     pre.progress("Encoding frames: ", frame, number_frames)
 
@@ -372,8 +377,13 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
         # Scanning/RLE/writing (QTC)        
         scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
         rled_block = RLE(scanned_block)
+
+        
         for rled in rled_block:
           qtc_bitstream += exp_golomb_coding(rled)
+          bits_in_frame += exp_golomb_coding(rled)
+
+    len_of_frame += [len(bits_in_frame)]
 
 
     # insert i_period data/writing (modes_mv)
@@ -383,6 +393,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
       differentiated_modes_mv_frame = exp_golomb_coding(1) + differentiated_modes_mv_frame
 
     differentiated_modes_mv_bitstream += differentiated_modes_mv_frame
+
+    len_of_frame[-1] = len_of_frame[-1] + len(differentiated_modes_mv_frame)
 
     #  Concatenate
     counter = 0
@@ -417,8 +429,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
   converted.close()
   encoded_file.close()
 
-  print("Encoding Completed")
-
+  # return len_of_frame
 ##############################################################################
 ##############################################################################
 
@@ -457,17 +468,17 @@ def decoder(in_file, out_file):
   i, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   QP, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)  
 
-  print("----------------------------------------------")
-  print("----------------------------------------------")
-  print("Q4 Decoder Parameters-")
-  print("----------------------------------------------")
-  print("in_file: ", in_file)
-  print("out_file: ", out_file)
-  print("y_res: ", y_res)
-  print("x_res: ", x_res)
-  print("i: ", i)
-  print("QP: ", QP)
-  print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("Q4 Decoder Parameters-")
+  # print("----------------------------------------------")
+  # print("in_file: ", in_file)
+  # print("out_file: ", out_file)
+  # print("y_res: ", y_res)
+  # print("x_res: ", x_res)
+  # print("i: ", i)
+  # print("QP: ", QP)
+  # print("----------------------------------------------")
 
   bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   mdiff_encoded_bitstream = encoded_bitstream[encoded_idx: encoded_idx + bits_in_mdiff]
@@ -587,13 +598,54 @@ if __name__ == "__main__":
   number_frames = 10
   y_res = 288
   x_res = 352
-  i = 16
+  i = 8
   r = 3
-  QP = 6  # from 0 to (log_2(i) + 7)
+  QP = 3  # from 0 to (log_2(i) + 7)
   i_period = 30
+
+  bits_in_each_frame = []
 
   decoder_infile = out_file
   decoder_outfile = "./videos/q4_decoded.yuv"
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
   decoder(decoder_infile, decoder_outfile)
+  
+# ##############################################################################
+# ######################### Code for producing plots ###########################
+# ##############################################################################
+  
+#   number_frames = 10
+#   y_res = 288
+#   x_res = 352
+#   i = 8
+#   r = 4
+#   QP = 3# from 0 to (log_2(i) + 7)
+  
+#   i_period = 1
+#   bits_in_each_frame += [encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)]
+  
+#   i_period = 4
+#   bits_in_each_frame += [encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)]
+  
+#   i_period = 10
+#   bits_in_each_frame += [encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)]
+
+# ##############################################################################
+
+#   fig, ax = plt.subplots()
+
+#   frames = range(1, number_frames+1)
+#   ax.plot(frames, bits_in_each_frame[0], '-', label='i_period = 1') 
+#   ax.plot(frames, bits_in_each_frame[1], '--', label='i_period = 4') 
+#   ax.plot(frames, bits_in_each_frame[2], '-.', label='i_period = 10') 
+  
+#   ax.set(xlabel='Frame', ylabel='Number of bits')
+#   ax.grid()
+#   ax.legend()
+#   plt.show()
+
+# ##############################################################################
+# ##############################################################################
+
+  print("Encoding Completed")
