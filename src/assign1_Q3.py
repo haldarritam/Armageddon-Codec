@@ -251,7 +251,7 @@ if __name__ == "__main__":
   number_frames = 10
   y_res = 288
   x_res = 352
-  i = 64
+  i = 4
   r = 4
   n = 2
 
