@@ -155,6 +155,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
   # no_motion_comp = open(no_motion_comp_name, "wb")
   # motion_comp = open(motion_comp_name, "wb")
 
+  # sum_of_residuals = []
+
   for frame in range(number_frames):
 
     pre.progress("Encoding frames: ", frame, number_frames)
@@ -182,6 +184,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
     
     # concatinate_and_write(ext_y_res, ext_x_res, y_res, x_res, n_y_blocks, n_x_blocks, residual_matrix[frame], motion_comp)
 
+    # sum_of_residuals += [np.sum(np.abs(residual_matrix[frame]))]
+
     for y_it in range(y_res):
       for x_it in range(x_res):
         # print((int)(new_reconstructed[y_it][x_it]))
@@ -195,6 +199,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n):
     
   np.savez(encoded_name, mv=mv, residual_matrix=residual_matrix, y_res=y_res, x_res=x_res)
   print("Encoding Completed")
+
+  # return sum_of_residuals
 
 
 def decoder(in_file, out_file):

@@ -289,20 +289,20 @@ def I_scanning(qtc, i, lin_it):
 
 def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
 
-  # print("----------------------------------------------")
-  # print("----------------------------------------------")
-  # print("Q4 Encoder Parameters-")
-  # print("----------------------------------------------")
-  # print("in_file: ", in_file)
-  # print("out_file: ", out_file)
-  # print("number_frames: ", number_frames)
-  # print("y_res: ", y_res)
-  # print("x_res: ", x_res)
-  # print("i: ", i)
-  # print("r: ", r)
-  # print("QP: ", QP)
-  # print("i_period: ", i_period)
-  # print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("Q4 Encoder Parameters-")
+  print("----------------------------------------------")
+  print("in_file: ", in_file)
+  print("out_file: ", out_file)
+  print("number_frames: ", number_frames)
+  print("y_res: ", y_res)
+  print("x_res: ", x_res)
+  print("i: ", i)
+  print("r: ", r)
+  print("QP: ", QP)
+  print("i_period: ", i_period)
+  print("----------------------------------------------")
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
   reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
@@ -468,17 +468,17 @@ def decoder(in_file, out_file):
   i, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   QP, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)  
 
-  # print("----------------------------------------------")
-  # print("----------------------------------------------")
-  # print("Q4 Decoder Parameters-")
-  # print("----------------------------------------------")
-  # print("in_file: ", in_file)
-  # print("out_file: ", out_file)
-  # print("y_res: ", y_res)
-  # print("x_res: ", x_res)
-  # print("i: ", i)
-  # print("QP: ", QP)
-  # print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("Q4 Decoder Parameters-")
+  print("----------------------------------------------")
+  print("in_file: ", in_file)
+  print("out_file: ", out_file)
+  print("y_res: ", y_res)
+  print("x_res: ", x_res)
+  print("i: ", i)
+  print("QP: ", QP)
+  print("----------------------------------------------")
 
   bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   mdiff_encoded_bitstream = encoded_bitstream[encoded_idx: encoded_idx + bits_in_mdiff]
@@ -598,12 +598,12 @@ if __name__ == "__main__":
   number_frames = 10
   y_res = 288
   x_res = 352
-  i = 8
-  r = 4
-  QP = 3  # from 0 to (log_2(i) + 7)
+  i = 16
+  r = 3
+  QP = 6  # from 0 to (log_2(i) + 7)
   i_period = 30
 
-  bits_in_each_frame = []
+  # bits_in_each_frame = []
 
   decoder_infile = out_file
   decoder_outfile = "./videos/q4_decoded.yuv"

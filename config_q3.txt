@@ -1,0 +1,10 @@
+-in=./videos/black_and_white.yuv
+-out=./videos/q3.yuv
+-q=3
+-o=both
+-frames=10
+-y_res=288
+-x_res=352
+-i=8
+-r=4
+-n=3

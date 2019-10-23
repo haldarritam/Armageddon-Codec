@@ -1,0 +1,11 @@
+-in=./videos/black_and_white.yuv
+-out=./videos/report/q4.yuv
+-q=4 
+-o=both
+-frames=10 
+-y_res=288 
+-x_res=352 
+-i=8 
+-r=2 
+-QP=4
+-ip=1 

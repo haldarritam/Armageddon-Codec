@@ -10,7 +10,7 @@ from assign1_Q4 import encoder as q4_encoder, decoder as q4_decoder
 if __name__ == "__main__":
 
   # Command line argument parser
-  parser = argparse.ArgumentParser(description='Armageddon video codec.')
+  parser = argparse.ArgumentParser(description='Armageddon video codec.', fromfile_prefix_chars='@')
   
   parser.add_argument('-frames', help='Number of frames to encode.', default=300,type=int, metavar='default=300')
 
@@ -83,5 +83,10 @@ if __name__ == "__main__":
       encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.npz"
       decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
 
-      q3_encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, n)
+      start = time.time()
+      print(q3_encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, n))
+      encoder_end = time.time()
       q3_decoder(encoded_name, decoded_name)
+      decoder_end = time.time()
+
+      print("Encoder Time: %f | Decoder Time: %f" % ((encoder_end-start), (decoder_end-encoder_end)))
