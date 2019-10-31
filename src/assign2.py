@@ -17,7 +17,6 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
   best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1)
   mv = (0, 0, 0)
 
-
   for buff_idx, reconstructed in enumerate(rec_buffer):
     for y_dir in range(-r, (r + 1)):
       for x_dir in range(-r, (r + 1)):
@@ -285,6 +284,24 @@ def I_scanning(qtc, i, lin_it):
         lin_it += 1
   return bl_y_frame, lin_it   
 
+def calc_RDO(pred_block, cur_block, Q, lambda_coeff):
+  residual = np.subtract(cur_block, pred_block)
+  transformed = dct2D(residual)
+  quantized = quantize_dct(transformed, Q)
+  scanned = scanning(quantized)
+  rled_block = RLE(scanned)
+
+  qtc_bitstream = ''
+  for rled in rled_block:
+    qtc_bitstream += exp_golomb_coding(rled)
+
+  R = len(qtc_bitstream) # Number of bits needed
+
+  D = np.sum(np.abs(residual))  # SAD
+  
+  J = D + (lambda_coeff * R)  # RDO
+  
+  return J
 
 
 ##############################################################################
