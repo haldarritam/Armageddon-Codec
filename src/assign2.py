@@ -292,6 +292,10 @@ def I_scanning(qtc, i, lin_it):
 
 def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames):
 
+  if (nRefFrames > (i_period - 1)):
+    print("nRefFrames is incompatible with i_period.")
+    return
+
   print("----------------------------------------------")
   print("----------------------------------------------")
   print("Q4 Encoder Parameters-")
