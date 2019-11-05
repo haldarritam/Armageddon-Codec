@@ -12,27 +12,58 @@ def idct2D(block): # Inverse Transform Function
   res = idct(idct(block, axis=0, norm='ortho'), axis=1, norm='ortho')
   return res
 
-def upscale_frame(reconstructed, y_res, x_res, i):
-  up_frame = np.zeros((2 * y_res, 2 * x_res), dtype=int)
+def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed):
+  extracted = 0
+  if(FMEEnabled):
+    dy_dir = int(y_dir/2)
+    dx_dir = int(x_dir/2)
+    move_is_inside_frame = (head_idy + dy_dir) >= 0 and (head_idy + dy_dir + i) < ext_y_res and (head_idx + dx_dir) >= 0 and (head_idx + dx_dir + i) < ext_x_res
+  else:
+    move_is_inside_frame = (head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res
+    
+  if (move_is_inside_frame):
+    if (not FMEEnabled):
+      extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
 
-  print(reconstructed)
-  for y_it in range(y_res-1):
-    for x_it in range(x_res-1):
-      print(y_it, x_it)
-      up_frame[4*y_it:4*y_it+2, 4*x_it:4*x_it+2] = reconstructed[y_it:y_it+2, x_it:x_it+2]
+    elif ((y_dir % 2 == 0) and (x_dir % 2 == 0)): # none fractional
+      #print("NONE FRAC", y_dir, x_dir)
+      dy_dir = int(y_dir/2)
+      dx_dir = int(x_dir/2)
+      
+      extracted = reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i]
 
-  # for i in range(20):
-  #   print(reconstructed[0,i])
-  # print("-------------")
-  # for i in range(20):
-  #   print(up_frame[0,i])
+    elif (x_dir % 2 and y_dir % 2): # both fractional
+      #print("BOTH FRAC", y_dir, x_dir)
+      dy_dir = int(y_dir/2)
+      dx_dir = int(x_dir/2)
+      
+      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+        reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i] +
+        reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1] +
+        reconstructed[head_idy + dy_dir + 1: head_idy + dy_dir + i + 1, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 4
 
-  print("-------------")
-  print(reconstructed)
-  print("-------------")
-  print(up_frame)
-  quit()
+    elif (x_dir % 2): # x fractional
+      #print("X FRAC", y_dir, x_dir)
+      dy_dir = int(y_dir/2)
+      dx_dir = int(x_dir/2)
+      
+      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+        reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 2
 
+    else: # y fractional
+      #print("Y FRAC", y_dir, x_dir)
+      dy_dir = int(y_dir/2)
+      dx_dir = int(x_dir/2)
+      
+      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+        reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i]) // 2
+        
+    # print(head_idy, head_idx)
+    # print(extracted)
+    # print("-------")
+    # print(reconstructed)
+
+  return extracted
 
 def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled):
 
@@ -44,80 +75,133 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
     up_r = 2 * r
 
   for buff_idx, reconstructed in enumerate(rec_buffer):
-    # if(FMEEnabled):
-    #   reconstructed = upscale_frame(reconstructed, ext_y_res, ext_x_res, i)
-
     for y_dir in range(-up_r, (up_r + 1)):
       for x_dir in range(-up_r, (up_r + 1)):
 
-        if(FMEEnabled):
-          dy_dir = int(y_dir/2)
-          dx_dir = int(x_dir/2)
-          move_is_inside_frame = (head_idy + dy_dir) >= 0 and (head_idy + dy_dir + i) < ext_y_res and (head_idx + dx_dir) >= 0 and (head_idx + dx_dir + i) < ext_x_res
-        else:
-          move_is_inside_frame = (head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res
-          
-        if (move_is_inside_frame):
-          if (not FMEEnabled):
-              extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
+        extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
 
-          elif ((y_dir % 2 == 0) and (x_dir % 2 == 0)): # none fractional
-            #print("NONE FRAC", y_dir, x_dir)
-            dy_dir = int(y_dir/2)
-            dx_dir = int(x_dir/2)
-            
-            extracted = reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i]
+        SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
 
-          elif (x_dir % 2 and y_dir % 2): # both fractional
-            #print("BOTH FRAC", y_dir, x_dir)
-            dy_dir = int(y_dir/2)
-            dx_dir = int(x_dir/2)
-            
-            extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
-              reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i] +
-              reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1] +
-              reconstructed[head_idy + dy_dir + 1: head_idy + dy_dir + i + 1, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 4
-
-          elif (x_dir % 2): # x fractional
-            #print("X FRAC", y_dir, x_dir)
-            dy_dir = int(y_dir/2)
-            dx_dir = int(x_dir/2)
-            
-            extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
-              reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 2
-
-          else: # y fractional
-            #print("Y FRAC", y_dir, x_dir)
-            dy_dir = int(y_dir/2)
-            dx_dir = int(x_dir/2)
-            
-            extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
-              reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i]) // 2
-              
-          # print(head_idy, head_idx)
-          # print(extracted)
-          # print("-------")
-          # print(reconstructed)
-
-          SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
-
-          if (SAD < best_SAD):
+        if (SAD < best_SAD):
+          best_SAD = SAD
+          mv = (y_dir, x_dir, buff_idx)
+        elif (SAD == best_SAD):
+          if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
             best_SAD = SAD
             mv = (y_dir, x_dir, buff_idx)
-          elif (SAD == best_SAD):
-            if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
+          elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
+            if (y_dir < mv[0]):
               best_SAD = SAD
               mv = (y_dir, x_dir, buff_idx)
-            elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
-              if (y_dir < mv[0]):
+            elif (y_dir == mv[0]):
+              if (x_dir < mv[1]):
                 best_SAD = SAD
                 mv = (y_dir, x_dir, buff_idx)
-              elif (y_dir == mv[0]):
-                if (x_dir < mv[1]):
-                  best_SAD = SAD
-                  mv = (y_dir, x_dir, buff_idx)
 
   return [mv]
+
+def RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO):
+
+  RDO = calc_RDO(extracted, block, Q, lambda_const)
+
+  if (RDO < best_RDO):
+    best_RDO = RDO
+    mv = (y_dir, x_dir, buff_idx)
+  elif (RDO == best_RDO):
+    if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
+      best_RDO = RDO
+      mv = (y_dir, x_dir, buff_idx)
+    elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
+      if (y_dir < mv[0]):
+        best_RDO = RDO
+        mv = (y_dir, x_dir, buff_idx)
+      elif (y_dir == mv[0]):
+        if (x_dir < mv[1]):
+          best_RDO = RDO
+          mv = (y_dir, x_dir, buff_idx)
+
+  return best_RDO, mv
+
+
+def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled):
+
+  if (i != 4 and i != 8 and i != 16):
+    print("Block size should be 4, 8 or 16 when VBS enabled!")
+    print("Exiting...")
+    exit()
+
+  sub_i = (int)(i / 2)
+
+  up_r = r
+  if (FMEEnabled):
+    up_r = 2 * r
+
+  # Extract the sub-blocks
+  sub_block = []
+
+  sub_block += [block[0: sub_i, 0: sub_i]]
+  sub_block += [block[0: sub_i, sub_i: sub_i + sub_i]]
+  sub_block += [block[sub_i: sub_i + sub_i, 0: sub_i]]
+  sub_block += [block[sub_i: sub_i + sub_i, sub_i: sub_i + sub_i]]
+
+  sub_head_idy = [head_idy, head_idy, head_idy + sub_i, head_idy + sub_i]
+  sub_head_idx = [head_idx, head_idx + sub_i, head_idx, head_idx + sub_i]
+
+
+  # Setting up the initial best block value using mv=(0, 0, 0)
+  extracted_block = FME_extraction(FMEEnabled, i, head_idy, head_idx, 0, 0, ext_y_res, ext_x_res, rec_buffer[0])
+
+  best_RDO_block = calc_RDO(extracted_block, block, Q, lambda_const) + 1
+
+  # Setting up the initial best sub-block value using mv=(0, 0, 0)
+  extracted_sub = []
+  
+  extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[0], sub_head_idx[0], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+  
+  extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[1], sub_head_idx[1], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+    
+  extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[2], sub_head_idx[2], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+    
+  extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[3], sub_head_idx[3], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+  
+  best_RDO_sub = []
+
+  best_RDO_sub += [calc_RDO(extracted_sub[0], sub_block[0], sub_Q, lambda_const)+1]
+  best_RDO_sub += [calc_RDO(extracted_sub[1], sub_block[1], sub_Q, lambda_const)+1]
+  best_RDO_sub += [calc_RDO(extracted_sub[2], sub_block[2], sub_Q, lambda_const)+1]
+  best_RDO_sub += [calc_RDO(extracted_sub[3], sub_block[3], sub_Q, lambda_const)+1]
+
+  mv = (0, 0, 0)
+  sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
+
+  for buff_idx, reconstructed in enumerate(rec_buffer):
+    # Block prediction
+    for y_dir in range(-up_r, (up_r + 1)):
+      for x_dir in range(-up_r, (up_r + 1)):
+
+        if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+
+          extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
+
+          best_RDO_block, mv = RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO_block)
+
+    # Sub-block prediction
+    for sub_idx in range(4):
+      for y_dir in range(-up_r, (up_r + 1)):
+        for x_dir in range(-up_r, (up_r + 1)):
+
+          if ((sub_head_idy[sub_idx] + y_dir) >= 0 and (sub_head_idy[sub_idx] + y_dir + sub_i) < ext_y_res and (sub_head_idx[sub_idx] + x_dir) >= 0 and (sub_head_idx[sub_idx] + x_dir + sub_i) < ext_x_res):
+
+            extracted_sub = FME_extraction(FMEEnabled, sub_i, sub_head_idy[sub_idx], sub_head_idx[sub_idx], y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
+
+            best_RDO_sub[sub_idx], sub_mv[sub_idx] = RDO_sel(extracted_sub, sub_block[sub_idx], sub_Q, lambda_const, y_dir, x_dir, buff_idx, sub_mv[sub_idx], best_RDO_sub[sub_idx])
+
+  RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
+
+  if (best_RDO_block < RDO_sub):
+    return [0, mv]
+  else:
+    return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]]
 
 def intra_prediction(frame, y_idx, x_idx):
 
@@ -151,7 +235,7 @@ def intra_prediction(frame, y_idx, x_idx):
 
   return [mode], left_edge_block
 
-def extract_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
+def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
   if (FMEEnable):
     if ((mv[0] % 2 == 0) and (mv[1] % 2 == 0)): # none fractional
       extracted = frame_buff[mv[2]][head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
@@ -180,6 +264,30 @@ def extract_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
     extracted = frame_buff[mv[2]][head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
 
   return extracted
+
+def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, FMEEnable):
+
+  extracted = []
+  for idx, mv in reversed(list(enumerate(modes_mv))):
+    if (mv == 0):
+      extracted = extract_predicted_block(frame_buff, head_idy, head_idx, modes_mv[idx + 1], i, FMEEnable)
+      
+      return 0, extracted
+
+    elif (mv == 1):
+      sub_i = (int)(i / 2)
+      sub_head_idy = [head_idy, head_idy, head_idy + sub_i, head_idy + sub_i]
+      sub_head_idx = [head_idx, head_idx + sub_i, head_idx, head_idx + sub_i]
+
+      for sub_idx in range(4):
+        extracted += [extract_predicted_block(frame_buff, sub_head_idy[sub_idx], sub_head_idx[sub_idx], modes_mv[idx + sub_idx + 1], sub_i, FMEEnable)]
+
+      conc_0 = np.concatenate((extracted[0], extracted[1]), axis=1)
+      conc_1 = np.concatenate((extracted[2], extracted[3]), axis=1)
+
+      extracted = np.concatenate((conc_0, conc_1), axis=0)
+      
+      return 1, extracted
 
 def calculate_residual_block(block, predicted):
 
@@ -213,14 +321,37 @@ def rescale_IDCT(QTC, Q):
 
 
 
-def decoder_core(QTC, Q, predicted_block):
+def decoder_core(QTC, Q, sub_Q, predicted_block, split):
+  approx_residual = []
+  recontructed_block = 0
+  if (split == 0):
+    approx_residual = idct2D(np.multiply(QTC, Q))
+    recontructed_block = np.add(approx_residual, predicted_block)
+  else:
+    sub_i = (int)(i / 2)
 
-  approx_residual = idct2D(np.multiply(QTC, Q))
-  recontructed_block = np.add(approx_residual, predicted_block)
+    # Extract the sub-blocks
+    sub_block = []
+    residual = []
+
+    sub_block += [QTC[0: sub_i, 0: sub_i]]
+    sub_block += [QTC[0: sub_i, sub_i: sub_i + sub_i]]
+    sub_block += [QTC[sub_i: sub_i + sub_i, 0: sub_i]]
+    sub_block += [QTC[sub_i: sub_i + sub_i, sub_i: sub_i + sub_i]]
+
+    for idx in range(4):
+      residual += [idct2D(np.multiply(sub_block[idx], sub_Q))]
+
+    conc_0 = np.concatenate((residual[0], residual[1]), axis=1)
+    conc_1 = np.concatenate((residual[2], residual[3]), axis=1)
+    approx_residual = np.concatenate((conc_0, conc_1), axis=0)
+
+    recontructed_block = np.add(approx_residual, predicted_block)
 
   for y_it in range(recontructed_block.shape[0]):
     for x_it in range(recontructed_block.shape[1]):
       recontructed_block[y_it][x_it] = max(0, min(recontructed_block[y_it][x_it], 255))
+
   return recontructed_block
 
 def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, mv):
@@ -384,13 +515,63 @@ def I_scanning(qtc, i, lin_it):
         lin_it += 1
   return bl_y_frame, lin_it   
 
+def calc_RDO(pred_block, cur_block, Q, lambda_coeff):
+  residual = np.subtract(cur_block, pred_block, dtype=int)
+  transformed = dct2D(residual)
+  quantized = quantize_dct(transformed, Q)
+  scanned = scanning(quantized)
+  rled_block = RLE(scanned)
+
+  qtc_bitstream = ''
+  for rled in rled_block:
+    qtc_bitstream += exp_golomb_coding(int(rled))
+
+  R = len(qtc_bitstream) # Number of bits needed
+
+  D = np.sum(np.abs(residual))  # SAD
+  
+  J = D + (lambda_coeff * R)  # RDO
+  
+  return J
+
+def transform_quantize(residual_matrix, frame, bl_y_it, bl_x_it, Q, sub_Q, split, i):
+  
+  QTC = 0
+
+  if (split == 0):
+    transformed_dct = dct2D(residual_matrix[frame][bl_y_it][bl_x_it])
+    QTC = quantize_dct(transformed_dct, Q)
+
+  else:
+
+    block = residual_matrix[frame][bl_y_it][bl_x_it]
+    sub_i = (int)(i / 2)
+
+    # Extract the sub-blocks
+    sub_block = []
+    quant = []
+
+    sub_block += [block[0: sub_i, 0: sub_i]]
+    sub_block += [block[0: sub_i, sub_i: sub_i + sub_i]]
+    sub_block += [block[sub_i: sub_i + sub_i, 0: sub_i]]
+    sub_block += [block[sub_i: sub_i + sub_i, sub_i: sub_i + sub_i]]
+
+    for idx in range(4):
+      transformed_dct = dct2D(sub_block[idx])
+      quant += [quantize_dct(transformed_dct, sub_Q)]
+
+    conc_0 = np.concatenate((quant[0], quant[1]), axis=1)
+    conc_1 = np.concatenate((quant[2], quant[3]), axis=1)
+    QTC = np.concatenate((conc_0, conc_1), axis=0)
+
+
+  return QTC
 
 
 ##############################################################################
 ##############################################################################
 
-def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, FMEEnable):
-
+def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable):
   if (nRefFrames > (i_period - 1)):
     print("nRefFrames is incompatible with i_period.")
     return
@@ -424,6 +605,18 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
   Q = calculate_Q(i, QP)
 
+  sub_QP = 0
+  if (QP == 0):
+    sub_QP = 0
+  else:
+    sub_QP = QP - 1
+
+  sub_Q = calculate_Q((int)(i/2), sub_QP)
+
+  Constant = 1
+  lambda_const = Constant * 2 ** ((QP - 12) / 3)
+  split = 0
+
   new_reconstructed = np.empty((n_y_blocks, n_x_blocks, i, i), dtype = int)
 
   file_and_extension = out_file.split(".")
@@ -453,28 +646,31 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
     for bl_y_it in range(n_y_blocks) :
       for bl_x_it in range(n_x_blocks):
 
+        # print("--------------- : ", frame)
+
         predicted_block = np.empty((i, i), dtype=int)
         if (is_p_block):
           # Calculate Motion Vector (inter)
-          modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable)
+          if(VBSEnable):
+            modes_mv_block += motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable)
+          else:
+            modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable)
 
-          predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block[-1], i, FMEEnable)
+          split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, FMEEnable)
 
         else:
           # Calculate mode (intra)
           temp_mode, predicted_block = intra_prediction(new_reconstructed, bl_y_it, bl_x_it)
           modes_mv_block += temp_mode
-
-
+          
       #  Calculate Residual Matrix
         residual_matrix[frame][bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], predicted_block)
 
       #  Trans/Quant/Rescaling/InvTrans
-        transformed_dct = dct2D(residual_matrix[frame][bl_y_it][bl_x_it])
-        QTC[frame][bl_y_it][bl_x_it] = quantize_dct(transformed_dct, Q)
+        QTC[frame][bl_y_it][bl_x_it] = transform_quantize(residual_matrix, frame, bl_y_it, bl_x_it, Q, sub_Q, split, i)
 
       #  Decode
-        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, predicted_block)
+        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, sub_Q, predicted_block, split)        
 
       # Differential Encoding
         if (is_p_block):
@@ -733,24 +929,24 @@ if __name__ == "__main__":
   in_file = "./videos/black_and_white.yuv"
   out_file = "./temp/q4_encoded.far"
 
-  number_frames = 300
+  number_frames = 10
   y_res = 288
   x_res = 352
   i = 16
   r = 2
   QP = 0  # from 0 to (log_2(i) + 7)
-  i_period = 5
+  i_period = 50
   nRefFrames = 2
-  FMEEnable = True
+  FMEEnable = False
+  VBSEnable = True
 
   # bits_in_each_frame = []
 
   decoder_infile = out_file
   decoder_outfile = "./videos/q4_decoded.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, FMEEnable)
-
-  decoder(decoder_infile, decoder_outfile)
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable)
+  # decoder(decoder_infile, decoder_outfile)
   
   # y_res = 3
   # x_res = 3
