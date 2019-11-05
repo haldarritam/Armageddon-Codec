@@ -98,4 +98,4 @@ if __name__ == "__main__":
     x_res = 352
     y_res = 288
     # converter.ftz_to_fff("../videos/foreman_cif.yuv", y_res, x_res, number_frames)
-    converter.ftz_to_bw("../../videos/foreman_cif.yuv","../../videos/black_and_white.yuv", y_res, x_res, number_frames)
+    converter.ftz_to_bw("../../videos/bus_cif.yuv","../../videos/black_and_white.yuv", y_res, x_res, number_frames)

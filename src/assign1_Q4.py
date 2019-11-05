@@ -621,13 +621,13 @@ if __name__ == "__main__":
   in_file = "../videos/black_and_white.yuv"
   out_file = "../temp/q4_encoded.far"
 
-  number_frames = 10
+  number_frames = 300
   y_res = 288
   x_res = 352
-  i = 16
-  r = 3
+  i = 8
+  r = 1
   QP = 6  # from 0 to (log_2(i) + 7)
-  i_period = 30
+  i_period = 5
 
   # bits_in_each_frame = []
 
