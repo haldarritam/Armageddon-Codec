@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import assign1_Q2_main as pre
 from scipy.fftpack import dct, idct
 
@@ -12,36 +12,60 @@ def idct2D(block): # Inverse Transform Function
   res = idct(idct(block, axis=0, norm='ortho'), axis=1, norm='ortho')
   return res
 
-def motion_vector_estimation(block, reconstructed, r, head_idy, head_idx, ext_y_res, ext_x_res, i):
+def find_mv(mv,block, reconstructed,head_idy, head_idx, ext_y_res, ext_x_res, i, origin):
+    best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1)
+    negative = -r
+    positive = (r + 1)
+    check = 1
+    if(origin!=1):
+        negative = -1
+        positive = 2
 
-  best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1)
-  mv = (0, 0)
+    for y_dir in range(negative, positive):
+        for x_dir in range(negative, positive):
+            if((check%2)==0):
+                if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+                    extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
 
-  for y_dir in range(-r, (r + 1)):
-    for x_dir in range(-r, (r + 1)):
+                    SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
+                    if (SAD < best_SAD):
+                        best_SAD = SAD
+                        mv = (y_dir, x_dir)
+                    elif (SAD == best_SAD):
+                        if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
+                            best_SAD = SAD
+                            mv = (y_dir, x_dir)
+                        elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
+                            if (y_dir < mv[0]):
+                                best_SAD = SAD
+                                mv = (y_dir, x_dir)
+                            elif (y_dir == mv[0]):
+                                if (x_dir < mv[1]):
+                                    best_SAD = SAD
+                                    mv = (y_dir, x_dir)
 
-      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
-        extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
+            if(origin!=1):
+                check = check + 1
+    return mv
 
-        SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
 
-        if (SAD < best_SAD):
-          best_SAD = SAD
-          mv = (y_dir, x_dir)
-        elif (SAD == best_SAD):
-          if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
-            best_SAD = SAD
-            mv = (y_dir, x_dir)
-          elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
-            if (y_dir < mv[0]):
-              best_SAD = SAD
-              mv = (y_dir, x_dir)
-            elif (y_dir == mv[0]):
-              if (x_dir < mv[1]):
-                best_SAD = SAD
-                mv = (y_dir, x_dir)
-
-  return [mv]
+def motion_vector_estimation(block, reconstructed, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FastME):
+    if(FastME):
+        mv = (0, 0)
+        mv_original = (0, 0)
+        origin = 1
+        iterate = 1
+        while(iterate):
+            mv = find_mv(mv,block, reconstructed,head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
+            if(mv_original == mv):
+                iterate = 0
+            else:
+                origin = 2
+                mv_original = mv
+        # print('mv ==',mv)
+        return [mv]
+    else:
+        pass
 
 def intra_prediction(frame, y_idx, x_idx):
 
@@ -76,9 +100,10 @@ def intra_prediction(frame, y_idx, x_idx):
   return [mode], left_edge_block
 
 def extract_block(block, head_idy, head_idx, mv, i):
-  extracted = block[head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
+    # print('mv=',mv)
+    extracted = block[head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
 
-  return extracted
+    return extracted
 
 def calculate_residual_block(block, predicted):
 
@@ -176,7 +201,7 @@ def exp_golomb_coding(number):
   bitstream = ('0' * (len(bitstream) - 1)) + bitstream
 
   return bitstream
-  
+
 
 def scanning(block):
   i = block.shape[0]
@@ -280,7 +305,7 @@ def I_scanning(qtc, i, lin_it):
       if (y < i and x < i):
         bl_y_frame[y][x] = qtc[lin_it]
         lin_it += 1
-  return bl_y_frame, lin_it   
+  return bl_y_frame, lin_it
 
 
 
@@ -347,8 +372,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
         predicted_block = np.empty((i, i), dtype=int)
         if (is_p_block):
           # Calculate Motion Vector (inter)
-          modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i)
-
+          modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], reconst, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, 1)
+          # print(modes_mv_block)
+          # exit()
           predicted_block = extract_block(reconst, bl_y_it * i, bl_x_it * i, modes_mv_block[-1], i)
 
         else:
@@ -374,11 +400,11 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period):
         else:
           differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
 
-        # Scanning/RLE/writing (QTC)        
+        # Scanning/RLE/writing (QTC)
         scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
         rled_block = RLE(scanned_block)
 
-        
+
         for rled in rled_block:
           qtc_bitstream += exp_golomb_coding(rled)
           bits_in_frame += exp_golomb_coding(rled)
@@ -439,7 +465,7 @@ def decoder(in_file, out_file):
   mdiff = []
   lin_it = 0
   size = 1  # bytes per pixel
-  
+
   qtc_idx = 0
   mdiff_idx = 0
   encoded_idx = 0
@@ -456,17 +482,17 @@ def decoder(in_file, out_file):
         byte = "{0:b}".format(int.from_bytes(data, byteorder=sys.byteorder, signed=False))
 
         byte = ('0' * (8 - len(byte))) + byte
-        
+
         encoded_bitstream += byte
 
   # Reading metadata
   while (int(encoded_bitstream[encoded_idx]) == 1):
     encoded_idx += 1
-  
+
   y_res, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   x_res, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   i, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
-  QP, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)  
+  QP, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
 
   print("----------------------------------------------")
   print("----------------------------------------------")
@@ -487,7 +513,7 @@ def decoder(in_file, out_file):
 
   # Reading qtc data
   while (qtc_idx < len(qtc_encoded_bitstream)):
-    
+
     temp, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
     qtc += [temp]
 
@@ -513,30 +539,30 @@ def decoder(in_file, out_file):
 
   if (y_res % i != 0):
     n_y_blocks += 1
-    ext_y_res += (i - (y_res % i)) 
+    ext_y_res += (i - (y_res % i))
   if (x_res % i != 0):
     n_x_blocks += 1
-    ext_x_res += (i - (x_res % i)) 
+    ext_x_res += (i - (x_res % i))
   ########################################
   ########################################
 
   Q = calculate_Q(i, QP)
   reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
   new_reconstructed = np.empty((n_y_blocks, n_x_blocks, i, i), dtype=int)
-  
+
   decoded = open(out_file, "wb")
 
   # Recover QTC Block:
-  # Performing inverse RLE to get scanned QTC  
+  # Performing inverse RLE to get scanned QTC
   qtc = I_RLE(qtc, i)
 
   number_of_frames = (int)((len(qtc) / (i*i)) / (n_x_blocks * n_y_blocks))
 
   modes_mv = []
   lin_idx = 0
-  
+
   for frame in range(number_of_frames):
-    
+
     pre.progress("Decoding frames: ", frame, number_of_frames)
 
     is_i_frame = mdiff[lin_idx]
@@ -550,7 +576,7 @@ def decoder(in_file, out_file):
 
         # Inverse scanning
         QTC_recovered, lin_it = I_scanning(qtc, i, lin_it)
-             
+
         if (is_i_frame):
           prev_mode = prev_mode - mdiff[lin_idx]
           modes_mv += [prev_mode]
@@ -561,7 +587,7 @@ def decoder(in_file, out_file):
           prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
           modes_mv += [[prev_mv[0], prev_mv[1]]]
           lin_idx += 2
-          
+
         #  Decode
         predicted_block = predict_block(reconst, new_reconstructed, modes_mv[-1], bl_y_it, bl_x_it, i, (not is_i_frame))
 
@@ -592,8 +618,8 @@ def decoder(in_file, out_file):
 
 if __name__ == "__main__":
 
-  in_file = "./videos/black_and_white.yuv"
-  out_file = "./temp/q4_encoded.far"
+  in_file = "../videos/black_and_white.yuv"
+  out_file = "../temp/q4_encoded.far"
 
   number_frames = 10
   y_res = 288
@@ -606,28 +632,28 @@ if __name__ == "__main__":
   # bits_in_each_frame = []
 
   decoder_infile = out_file
-  decoder_outfile = "./videos/q4_decoded.yuv"
+  decoder_outfile = "../videos/q4_decoded.yuv"
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
   decoder(decoder_infile, decoder_outfile)
-  
+
 # ##############################################################################
 # ######################### Code for producing plots ###########################
 # ##############################################################################
-  
+
 #   number_frames = 10
 #   y_res = 288
 #   x_res = 352
 #   i = 8
 #   r = 4
 #   QP = 3# from 0 to (log_2(i) + 7)
-  
+
 #   i_period = 1
 #   bits_in_each_frame += [encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)]
-  
+
 #   i_period = 4
 #   bits_in_each_frame += [encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)]
-  
+
 #   i_period = 10
 #   bits_in_each_frame += [encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)]
 
@@ -636,10 +662,10 @@ if __name__ == "__main__":
 #   fig, ax = plt.subplots()
 
 #   frames = range(1, number_frames+1)
-#   ax.plot(frames, bits_in_each_frame[0], '-', label='i_period = 1') 
-#   ax.plot(frames, bits_in_each_frame[1], '--', label='i_period = 4') 
-#   ax.plot(frames, bits_in_each_frame[2], '-.', label='i_period = 10') 
-  
+#   ax.plot(frames, bits_in_each_frame[0], '-', label='i_period = 1')
+#   ax.plot(frames, bits_in_each_frame[1], '--', label='i_period = 4')
+#   ax.plot(frames, bits_in_each_frame[2], '-.', label='i_period = 10')
+
 #   ax.set(xlabel='Frame', ylabel='Number of bits')
 #   ax.grid()
 #   ax.legend()

@@ -15,17 +15,17 @@ class CSC:
         for frame in range(number_frames) :
             raw = yuv_file.read(bytes_frame)
             y_frame = np.concatenate((y_frame, raw[: x_res * y_res]), axis=None)
-                                    
-            self._progress("Converting:", frame, number_frames)  
-              
+
+            self._progress("Converting:", frame, number_frames)
+
         yuv_file.close()
 
         converted = open(out_file, "wb")
 
         for frame in range(number_frames) :
-            converted.write(y_frame[frame])    
+            converted.write(y_frame[frame])
             self._progress("Saving file:", frame, number_frames)
-            
+
         converted.close()
 
     def ftz_to_fff(self, file, y_res, x_res, number_frames):
@@ -42,12 +42,12 @@ class CSC:
             raw = yuv_file.read(bytes_frame)
             y_frame = np.concatenate((y_frame, raw[ : x_res * y_res]), axis=None)
             u_it = 0
-    
-            for y_it in range(y_res) :    
+
+            for y_it in range(y_res) :
                 for x_it in range(x_res) :
                     u_offset = total_pixels_frame + u_it
                     v_offset = (int) (u_offset + total_pixels_frame / 4)
-            
+
                     if y_it % 2 == 0 :
                         if x_it % 2 == 0 :
                             u_frame[frame][y_it][x_it] = int.from_bytes((raw[u_offset : u_offset + 1]), byteorder=sys.byteorder)
@@ -59,48 +59,43 @@ class CSC:
                     else :
                         u_frame[frame][y_it][x_it] = u_frame[frame][y_it - 1][x_it]
                         v_frame[frame][y_it][x_it] = v_frame[frame][y_it - 1][x_it]
-                        
-            self._progress("Converting:", frame, number_frames)  
-              
+
+            self._progress("Converting:", frame, number_frames)
+
         yuv_file.close()
 
         converted = open(self._output_file_name(file), "wb")
 
         for frame in range(number_frames) :
             converted.write(y_frame[frame])
-    
-            for y_it in range(y_res) :    
+
+            for y_it in range(y_res) :
                 for x_it in range(x_res) :
                     converted.write((int)(u_frame[frame][y_it][x_it]).to_bytes(1, byteorder=sys.byteorder))
-            
-            for y_it in range(y_res) :    
+
+            for y_it in range(y_res) :
                 for x_it in range(x_res) :
                     converted.write((int)(v_frame[frame][y_it][x_it]).to_bytes(1, byteorder=sys.byteorder))
-    
+
             self._progress("Saving file:", frame, number_frames)
-            
+
         converted.close()
-        
+
     def _progress(self, message, current, total):
         progress = (int) (current / (total - 1) * 100)
         if progress % 10 == 0 :
             sys.stdout.write(message + " %d%%   \r" % (progress) )
             sys.stdout.flush()
-            
+
     def _output_file_name(self, orig_file_name) :
         file_and_extension = orig_file_name.split(".")
         return ".".join(file_and_extension[:-1]) + "_444.yuv"
-        
-    
+
+
 if __name__ == "__main__":
     converter = CSC()
     number_frames = 300
     x_res = 352
     y_res = 288
     # converter.ftz_to_fff("../videos/foreman_cif.yuv", y_res, x_res, number_frames)
-    converter.ftz_to_bw("../videos/foreman_cif.yuv", y_res, x_res, number_frames)
-
-
-    
-
-
+    converter.ftz_to_bw("../../videos/foreman_cif.yuv","../../videos/black_and_white.yuv", y_res, x_res, number_frames)
