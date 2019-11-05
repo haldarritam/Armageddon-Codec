@@ -18,6 +18,7 @@ def find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
     positive = (r + 1)
     check = 1
     if(origin!=1):
+        print('HERE')
         negative = -1
         positive = 2
 
@@ -53,18 +54,17 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
 
     if(FastME):
         mv = (0, 0, 0)
-        mv_origin = mv
         mv_original = (0, 0, 0)
         origin = 1
         iterate = 1
         while(iterate):
-            mv = find_mv(mv_origin, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
-            if(mv_original == mv):
+            mv_new = find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
+            if(mv_new == mv_original):
                 iterate = 0
             else:
                 origin = 2
-                mv_original = mv
-        # print('mv ==',mv)
+                mv_original = mv_new
+                mv = mv_new
         return [mv]
     else:
         pass

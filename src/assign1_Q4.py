@@ -26,7 +26,7 @@ def find_mv(mv,block, reconstructed,head_idy, head_idx, ext_y_res, ext_x_res, i,
             if((check%2)==0):
                 if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
                     extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
-
+                
                     SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
                     if (SAD < best_SAD):
                         best_SAD = SAD
