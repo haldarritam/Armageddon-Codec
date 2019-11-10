@@ -13,7 +13,8 @@ def idct2D(block): # Inverse Transform Function
   res = idct(idct(block, axis=0, norm='ortho'), axis=1, norm='ortho')
   return res
 
-def find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin):
+def find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, rec_buffer_pos = -1):
+    mv = (0, 0, 0)
     best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1)
     negative = -r
     positive = (r + 1)
@@ -24,32 +25,34 @@ def find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
         positive = 2
 
     for buff_idx, reconstructed in enumerate(rec_buffer):
-        for y_dir in range(negative, positive):
-            for x_dir in range(negative, positive):
-                if((check%2)==0):
-                    if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
-                        extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
+        if (rec_buffer_pos != -1 and buff_idx == rec_buffer_pos) or (rec_buffer_pos == -1):
+          for y_dir in range(negative, positive):
+              for x_dir in range(negative, positive):
+                  if((origin != 1 and (check%2)==0) or origin == 1):
+                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+                          #print(reconstructed.shape)
+                          extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
 
-                        SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
-                        if (SAD < best_SAD):
-                            best_SAD = SAD
-                            mv = (y_dir, x_dir, buff_idx)
-                        elif (SAD == best_SAD):
-                            if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
-                                best_SAD = SAD
-                                mv = (y_dir, x_dir, buff_idx)
-                            elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
-                                if (y_dir < mv[0]):
-                                    best_SAD = SAD
-                                    mv = (y_dir, x_dir, buff_idx)
-                                elif (y_dir == mv[0]):
-                                    if (x_dir < mv[1]):
-                                        best_SAD = SAD
-                                        mv = (y_dir, x_dir, buff_idx)
+                          SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
+                          if (SAD < best_SAD):
+                              best_SAD = SAD
+                              mv = (y_dir, x_dir, buff_idx)
+                          elif (SAD == best_SAD):
+                              if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
+                                  best_SAD = SAD
+                                  mv = (y_dir, x_dir, buff_idx)
+                              elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
+                                  if (y_dir < mv[0]):
+                                      best_SAD = SAD
+                                      mv = (y_dir, x_dir, buff_idx)
+                                  elif (y_dir == mv[0]):
+                                      if (x_dir < mv[1]):
+                                          best_SAD = SAD
+                                          mv = (y_dir, x_dir, buff_idx)
 
-                if(origin!=1):
-                    check = check + 1
-    # print(mv,best_SAD)
+                  if(origin!=1):
+                      check = check + 1
+    # print("Mv and best SAD are: ", mv,best_SAD)
     # print("+++++++")
     return  mv,best_SAD
 
@@ -57,40 +60,55 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
 
     if(FastME):
         # print('Entered')
-        mv = (0, 0, 0)
         origin = 1
         iterate = 1
         mv_accum = []
         mv_new = ()
         mv_test = ()
-        while(iterate):
-            # print('Entered in While')
-            mv_new,sad_new = find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
-            # print('Got mv')
-            # print(type(mv_new))
-            origin = 2
-            mv_test,sad_test = find_mv(mv_new, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
-            # print('Got sad')
-            if(sad_new < sad_test):
-                origin = 1
-                nframe = []
-                nframe.append(mv_new[0])
-                mv_new = mv_new[1:]
-                mv_test = mv_test[1:]
-                new = list(map(operator.add, mv_new, mv_test))
-                mv_accum = tuple(nframe + new)
-                mv = mv_new
-                # print(mv_accum)
-                # print('Success')
-                # exit()
-            else:
-                # print(" entered else")
-                iterate = 0
-                if(len(mv_accum)==0):
-                    mv_accum = mv_new
-                # print('mv=',mv)
 
-        return [mv_accum]
+        mv_new,sad_new = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
+        # print('Got mv')
+        # print(type(mv_new))
+        origin = 2
+
+        if mv_new[0] == 0 and mv_new[1] == 0:
+          #print("MV points to origin")
+          return [mv_new]
+
+        #print(head_idy, head_idx)
+
+        head_idy += mv_new[0]
+        head_idx += mv_new[1]
+        #print(mv_new)
+
+        if nRefFrames > 1:
+          ref_frame = mv_new[2]
+        else:
+          ref_frame = -1
+
+        #print("Ref Frame is ", ref_frame)
+
+
+        while(iterate):
+            #print("Head is ", head_idy, head_idx)
+            mv_test,sad_test = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, ref_frame)
+            # print('Got sad')
+            #print ("SADs: ", sad_test, sad_new)
+            if(sad_test < sad_new):
+                sad_new = sad_test
+                head_idy += mv_test[0]
+                head_idx += mv_test[1]
+                #print(mv_new)
+                #print(mv_new, mv_test)
+                mv_new = (mv_new[0]+mv_test[0], mv_new[1]+mv_test[1], ref_frame)
+                #print(mv_new)
+                #print(mv_new)
+                #print(mv_new)
+                #print ("Better MV found!")
+            else:
+                iterate = 0
+
+        return [mv_new]
     else:
         # print("new else")
         pass
@@ -128,8 +146,11 @@ def intra_prediction(frame, y_idx, x_idx):
   return [mode], left_edge_block
 
 def extract_block(frame_buff, head_idy, head_idx, mv, i):
-  # print('mv===',mv)
+  #print('mv===',mv)
+  #print(mv[0], mv[1])
+  #print(head_idy + mv[0], head_idy + mv[0] + i, head_idx + mv[1], head_idx + mv[1] + i)
   extracted = frame_buff[mv[2]][head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
+  #print(extracted.shape)
 
   return extracted
 
@@ -690,8 +711,8 @@ if __name__ == "__main__":
   number_frames = 300
   y_res = 288
   x_res = 352
-  i = 8
-  r = 1
+  i = 16
+  r = 3
   QP = 6  # from 0 to (log_2(i) + 7)
   i_period = 5
   nRefFrames = 4
