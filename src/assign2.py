@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import operator
 # import matplotlib.pyplot as plt
 import assign1_Q2_main as pre
 from scipy.fftpack import dct, idct
@@ -18,7 +19,7 @@ def find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
     positive = (r + 1)
     check = 1
     if(origin!=1):
-        print('HERE')
+        # print('HERE')
         negative = -1
         positive = 2
 
@@ -48,25 +49,50 @@ def find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
 
                 if(origin!=1):
                     check = check + 1
-    return mv
+    # print(mv,best_SAD)
+    # print("+++++++")
+    return  mv,best_SAD
 
 def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FastME):
 
     if(FastME):
+        # print('Entered')
         mv = (0, 0, 0)
-        mv_original = (0, 0, 0)
         origin = 1
         iterate = 1
+        mv_accum = []
+        mv_new = ()
+        mv_test = ()
         while(iterate):
-            mv_new = find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
-            if(mv_new == mv_original):
-                iterate = 0
-            else:
-                origin = 2
-                mv_original = mv_new
+            # print('Entered in While')
+            mv_new,sad_new = find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
+            # print('Got mv')
+            # print(type(mv_new))
+            origin = 2
+            mv_test,sad_test = find_mv(mv_new, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
+            # print('Got sad')
+            if(sad_new < sad_test):
+                origin = 1
+                nframe = []
+                nframe.append(mv_new[0])
+                mv_new = mv_new[1:]
+                mv_test = mv_test[1:]
+                new = list(map(operator.add, mv_new, mv_test))
+                mv_accum = tuple(nframe + new)
                 mv = mv_new
-        return [mv]
+                # print(mv_accum)
+                # print('Success')
+                # exit()
+            else:
+                # print(" entered else")
+                iterate = 0
+                if(len(mv_accum)==0):
+                    mv_accum = mv_new
+                # print('mv=',mv)
+
+        return [mv_accum]
     else:
+        # print("new else")
         pass
 
 def intra_prediction(frame, y_idx, x_idx):
@@ -102,6 +128,7 @@ def intra_prediction(frame, y_idx, x_idx):
   return [mode], left_edge_block
 
 def extract_block(frame_buff, head_idy, head_idx, mv, i):
+  # print('mv===',mv)
   extracted = frame_buff[mv[2]][head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
 
   return extracted
@@ -381,6 +408,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         predicted_block = np.empty((i, i), dtype=int)
         if (is_p_block):
           # Calculate Motion Vector (inter)
+          # print('f=',frame,'by=',bl_y_it,'bx=',bl_x_it)
+          # print(bl_y_frame[frame][bl_y_it][bl_x_it])
+          # print( rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i)
           modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i,1)
 
           predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block[-1], i)
