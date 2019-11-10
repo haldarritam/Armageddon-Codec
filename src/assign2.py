@@ -56,7 +56,7 @@ def find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
 def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FastME):
 
     if(FastME):
-        # print('Entered')
+
         mv = (0, 0, 0)
         origin = 1
         iterate = 1
@@ -64,35 +64,31 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
         mv_new = ()
         mv_test = ()
         while(iterate):
-            # print('Entered in While')
             mv_new,sad_new = find_mv(mv, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
-            # print('Got mv')
-            # print(type(mv_new))
+
             origin = 2
             mv_test,sad_test = find_mv(mv_new, block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
-            # print('Got sad')
-            if(sad_new < sad_test):
+
+            if(sad_new > sad_test):
                 origin = 1
                 nframe = []
                 nframe.append(mv_new[0])
                 mv_new = mv_new[1:]
                 mv_test = mv_test[1:]
                 new = list(map(operator.add, mv_new, mv_test))
-                mv_accum = tuple(nframe + new)
+                if(len(mv_accum)==0):
+                    mv_accum = tuple(nframe + new)
+                else:
+                    new = list(map(operator.add, new, list(mv_accum[1:])))
+                    mv_accum = tuple(nframe + new)
                 mv = mv_new
-                # print(mv_accum)
-                # print('Success')
-                # exit()
             else:
-                # print(" entered else")
                 iterate = 0
                 if(len(mv_accum)==0):
                     mv_accum = mv_new
-                # print('mv=',mv)
 
         return [mv_accum]
     else:
-        # print("new else")
         pass
 
 def intra_prediction(frame, y_idx, x_idx):
