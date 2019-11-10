@@ -398,6 +398,54 @@ def differential_encoder_decoder(modes_mv_block, is_p_block, not_first_bl):
 
   return [return_data]
 
+def differential_encoder_decoder_vbs(modes_mv_block, is_p_block, not_first_bl):
+  return_data = []
+  if (is_p_block):
+    if (not_first_bl):
+      for idx, mv in reversed(list(enumerate(modes_mv_block))):
+        
+        if (mv == 0):
+          for prev_idx, prev_mv in reversed(list(enumerate(modes_mv_block[:idx]))):
+            if ((prev_mv == 0) or (prev_mv == 1)):
+              return_data += [modes_mv_block[prev_idx] - modes_mv_block[idx]]
+              break
+          return_data += [list(np.array(modes_mv_block[idx - 1]) - np.array(modes_mv_block[idx + 1]))]
+          break
+        
+        elif (mv == 1):
+
+          for prev_idx, prev_mv in reversed(list(enumerate(modes_mv_block[:idx]))):
+            if ((prev_mv == 0) or (prev_mv == 1)):
+              return_data += [modes_mv_block[prev_idx] - modes_mv_block[idx]]
+              break
+          return_data += [list(np.array(modes_mv_block[idx - 1]) - np.array(modes_mv_block[idx + 1]))]
+          return_data += [list(np.array(modes_mv_block[idx + 1]) - np.array(modes_mv_block[idx + 2]))]
+          return_data += [list(np.array(modes_mv_block[idx + 2]) - np.array(modes_mv_block[idx + 3]))]
+          return_data += [list(np.array(modes_mv_block[idx + 3]) - np.array(modes_mv_block[idx + 4]))]
+          break      
+    else:
+      for idx, mv in reversed(list(enumerate(modes_mv_block))):          
+        if (mv == 0):
+          return_data += [0 - modes_mv_block[idx]]
+          return_data += [list(np.array([0, 0, 0]) - np.array(modes_mv_block[idx + 1]))]
+          break          
+        elif (mv == 1):
+          return_data += [0 - modes_mv_block[idx]]
+          return_data += [list(np.array([0, 0, 0]) - np.array(modes_mv_block[idx + 1]))]
+          return_data += [list(np.array(modes_mv_block[idx + 1]) - np.array(modes_mv_block[idx + 2]))]
+          return_data += [list(np.array(modes_mv_block[idx + 2]) - np.array(modes_mv_block[idx + 3]))]
+          return_data += [list(np.array(modes_mv_block[idx + 3]) - np.array(modes_mv_block[idx + 4]))]
+          break
+  else:
+    if (not_first_bl):
+      return_data += modes_mv_block[-2] - modes_mv_block[-1]
+    else:
+      return_data += 0 - modes_mv_block[-1]
+
+  return return_data
+
+  
+
 def exp_golomb_coding(number):
 
   if (number <= 0):
@@ -674,9 +722,20 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
       # Differential Encoding
         if (is_p_block):
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][0])
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][1])
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][2])
+          if (VBSEnable):
+            if (split == 0):
+              y_range = 2
+            else:
+              y_range = 5
+            differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[0])
+
+            for num_mv in range(1, y_range):
+              for index in range(3):
+                differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[num_mv][index])
+          else:
+            differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][0])
+            differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][1])
+            differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][2])
         else:
           differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
 
