@@ -261,33 +261,46 @@ def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
         frame_buff[mv[2]][head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i]) // 2
 
   else:
+    # print("\n")
+    # print(mv)
+    # print(head_idy, head_idx, i)
+    # print(frame_buff.shape)
+    # quit()
     extracted = frame_buff[mv[2]][head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
+    
+    # print(extracted.shape)
 
   return extracted
 
-def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, FMEEnable):
+def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, VBSEnable, FMEEnable):
 
-  extracted = []
-  for idx, mv in reversed(list(enumerate(modes_mv))):
-    if (mv == 0):
-      extracted = extract_predicted_block(frame_buff, head_idy, head_idx, modes_mv[idx + 1], i, FMEEnable)
-      
-      return 0, extracted
+  if(VBSEnable):
+    extracted = []
+    # print(modes_mv)
+    for idx, mv in reversed(list(enumerate(modes_mv))):
+      if (mv == 0):
+        extracted = extract_predicted_block(frame_buff, head_idy, head_idx, modes_mv[idx + 1], i, FMEEnable)
+        
+        return 0, extracted
 
-    elif (mv == 1):
-      sub_i = (int)(i / 2)
-      sub_head_idy = [head_idy, head_idy, head_idy + sub_i, head_idy + sub_i]
-      sub_head_idx = [head_idx, head_idx + sub_i, head_idx, head_idx + sub_i]
+      elif (mv == 1):
+        sub_i = (int)(i / 2)
+        sub_head_idy = [head_idy, head_idy, head_idy + sub_i, head_idy + sub_i]
+        sub_head_idx = [head_idx, head_idx + sub_i, head_idx, head_idx + sub_i]
 
-      for sub_idx in range(4):
-        extracted += [extract_predicted_block(frame_buff, sub_head_idy[sub_idx], sub_head_idx[sub_idx], modes_mv[idx + sub_idx + 1], sub_i, FMEEnable)]
+        for sub_idx in range(4):
+          extracted += [extract_predicted_block(frame_buff, sub_head_idy[sub_idx], sub_head_idx[sub_idx], modes_mv[idx + sub_idx + 1], sub_i, FMEEnable)]
 
-      conc_0 = np.concatenate((extracted[0], extracted[1]), axis=1)
-      conc_1 = np.concatenate((extracted[2], extracted[3]), axis=1)
+        conc_0 = np.concatenate((extracted[0], extracted[1]), axis=1)
+        conc_1 = np.concatenate((extracted[2], extracted[3]), axis=1)
 
-      extracted = np.concatenate((conc_0, conc_1), axis=0)
-      
-      return 1, extracted
+        extracted = np.concatenate((conc_0, conc_1), axis=0)
+        
+        return 1, extracted
+  else:
+    extracted = extract_predicted_block(frame_buff, head_idy, head_idx, modes_mv[-1], i, FMEEnable)
+
+    return 0, extracted
 
 def calculate_residual_block(block, predicted):
 
@@ -360,13 +373,18 @@ def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext
 
   return new_reconstructed
 
-def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, is_p_block, FMEEnable):
+def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, is_p_block, VBSEnable, FMEEnable):
 
   grey = 128
   predicted_block = np.empty((i, i), dtype=int)
+  split = 0
   if(is_p_block):
-          predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, FMEEnable)
+          # predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, FMEEnable)
+          
+          split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, VBSEnable, FMEEnable)
+
   else:
+    modes_mv = modes_mv[-1]
     top_edge = np.full((1, i), grey)
     left_edge = np.full((i, 1), grey)
 
@@ -380,7 +398,7 @@ def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, 
       left_edge = new_reconstructed[bl_y_it][bl_x_it - 1][:, -1].reshape((i, 1))
       predicted_block[:, :] = left_edge
 
-  return predicted_block
+  return split, predicted_block
 
 def differential_encoder_decoder(modes_mv_block, is_p_block, not_first_bl):
   return_data = 0
@@ -685,8 +703,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
     bits_in_frame = ''
 
-    pre.progress("Encoding frames: ", frame, number_frames)
-
     modes_mv_block = []
 
     is_p_block = frame % i_period
@@ -704,7 +720,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
           else:
             modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable)
 
-          split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, FMEEnable)
+          split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
+
+          # print(frame, bl_y_it, bl_x_it, predicted_block[int(i/2)])
 
         else:
           # Calculate mode (intra)
@@ -718,7 +736,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         QTC[frame][bl_y_it][bl_x_it] = transform_quantize(residual_matrix, frame, bl_y_it, bl_x_it, Q, sub_Q, split, i)
 
       #  Decode
-        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, sub_Q, predicted_block, split)        
+        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, sub_Q, predicted_block, split)      
 
       # Differential Encoding
         if (is_p_block):
@@ -786,6 +804,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
       rec_buffer = np.delete(rec_buffer, (nRefFrames - 1), 0)
 
     # print(rec_buffer.shape[0])
+
+    pre.progress("Encoding frames: ", frame, number_frames)
     
 
 
@@ -793,7 +813,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   bits_in_a_byte = 8
   bits_in_mdiff = len(differentiated_modes_mv_bitstream)
 
-  differentiated_modes_mv_bitstream = exp_golomb_coding(y_res) + exp_golomb_coding(x_res) + exp_golomb_coding(i) + exp_golomb_coding(QP) + exp_golomb_coding(nRefFrames) + exp_golomb_coding(FMEEnable) + exp_golomb_coding(bits_in_mdiff) + differentiated_modes_mv_bitstream
+  differentiated_modes_mv_bitstream = exp_golomb_coding(y_res) + exp_golomb_coding(x_res) + exp_golomb_coding(i) + exp_golomb_coding(QP) + exp_golomb_coding(nRefFrames) + exp_golomb_coding(FMEEnable) + exp_golomb_coding(VBSEnable) + exp_golomb_coding(bits_in_mdiff) + differentiated_modes_mv_bitstream
 
   final_bitstream = differentiated_modes_mv_bitstream + qtc_bitstream
 
@@ -846,6 +866,7 @@ def decoder(in_file, out_file):
   QP, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   nRefFrames, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   FMEEnable, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
+  VBSEnable, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   
 
   print("----------------------------------------------")
@@ -859,6 +880,8 @@ def decoder(in_file, out_file):
   print("i: ", i)
   print("QP: ", QP)
   print("nRefFrames: ", nRefFrames)
+  print("FMEEnable: ", FMEEnable)
+  print("VBSEnable: ", VBSEnable)
   print("----------------------------------------------")
 
   bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
@@ -902,6 +925,13 @@ def decoder(in_file, out_file):
   ########################################
 
   Q = calculate_Q(i, QP)
+  sub_QP = 0
+  if (QP == 0):
+    sub_QP = 0
+  else:
+    sub_QP = QP - 1
+  sub_Q = calculate_Q((int)(i / 2), sub_QP)
+  
   # reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
   new_reconstructed = np.empty((n_y_blocks, n_x_blocks, i, i), dtype=int)
   rec_buffer = np.empty((nRefFrames, ext_y_res, ext_x_res), dtype=int)
@@ -939,19 +969,51 @@ def decoder(in_file, out_file):
           lin_idx += 1
 
         else:
-          prev_mv[0] = prev_mv[0] - mdiff[lin_idx+0]
-          prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
-          prev_mv[2] = prev_mv[2] - mdiff[lin_idx+2]
-          modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
+          if (VBSEnable):
+            prev_mode = prev_mode - mdiff[lin_idx]
+            vbs_mode = prev_mode
+            modes_mv += [vbs_mode]
+            lin_idx += 1
 
-          # print(modes_mv[-1])
-          lin_idx += 3
+            if (vbs_mode == 0):
+              y_range = 2
+            else:
+              y_range = 5
+
+            for num_mv in range(1, y_range):
+                prev_mv[0] = prev_mv[0] - mdiff[lin_idx+0]
+                prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
+                prev_mv[2] = prev_mv[2] - mdiff[lin_idx+2]
+                modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
+                lin_idx += 3
+            
+          else:
+            prev_mv[0] = prev_mv[0] - mdiff[lin_idx+0]
+            prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
+            prev_mv[2] = prev_mv[2] - mdiff[lin_idx+2]
+            modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
+            lin_idx += 3
           
         #  Decode
-        predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv[-1], bl_y_it, bl_x_it, i, (not is_i_frame), FMEEnable)
+        # print(modes_mv)
+        # print(modes_mv[-1])
 
-        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, predicted_block)
+        split, predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable)
+        
+        # print(frame, bl_y_it, bl_x_it, split, predicted_block.shape)
 
+        # print(predicted_block.shape)
+        # new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, predicted_block)
+
+        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, sub_Q, predicted_block, split)
+        
+        # print(frame, bl_y_it, bl_x_it, new_reconstructed[bl_y_it][bl_x_it][int(i/2)])
+
+    # if (frame == 1):
+    #   in_block = (n_y_blocks*n_x_blocks)
+    #   print(modes_mv[in_block:in_block+30])
+    #   quit()
+    
     #  Concatenate
     counter = 0
     conc_reconstructed = np.empty((ext_y_res, ext_x_res), dtype = int)
@@ -986,7 +1048,7 @@ def decoder(in_file, out_file):
 if __name__ == "__main__":
 
   in_file = "./videos/black_and_white.yuv"
-  out_file = "./temp/q4_encoded.far"
+  out_file = "./temp/assign2_vbs_QP0.far"
 
   number_frames = 10
   y_res = 288
@@ -1005,7 +1067,7 @@ if __name__ == "__main__":
   decoder_outfile = "./videos/q4_decoded.yuv"
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable)
-  # decoder(decoder_infile, decoder_outfile)
+  decoder(decoder_infile, decoder_outfile)
   
   # y_res = 3
   # x_res = 3
