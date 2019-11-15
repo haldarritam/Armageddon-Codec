@@ -88,7 +88,6 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
 
         #print("Ref Frame is ", ref_frame)
 
-
         while(iterate):
             #print("Head is ", head_idy, head_idx)
             mv_test,sad_test = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, ref_frame)
@@ -111,7 +110,9 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
         return [mv_new]
     else:
         # print("new else")
-        pass
+        origin = 1
+        mv_non_fme, sad_non_fme = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin)
+        return [mv_non_fme]
 
 def intra_prediction(frame, y_idx, x_idx):
 
@@ -382,6 +383,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   print("QP: ", QP)
   print("i_period: ", i_period)
   print("nRefFrames: ", nRefFrames)
+  print("FastME: ",FastME)
   print("----------------------------------------------")
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
@@ -432,7 +434,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
           # print('f=',frame,'by=',bl_y_it,'bx=',bl_x_it)
           # print(bl_y_frame[frame][bl_y_it][bl_x_it])
           # print( rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i)
-          modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i,1)
+          modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i,FastME)
 
           predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block[-1], i)
 
@@ -579,6 +581,7 @@ def decoder(in_file, out_file):
   print("i: ", i)
   print("QP: ", QP)
   print("nRefFrames: ", nRefFrames)
+  print("FastME: ",FastME)
   print("----------------------------------------------")
 
   bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
@@ -716,6 +719,7 @@ if __name__ == "__main__":
   QP = 6  # from 0 to (log_2(i) + 7)
   i_period = 5
   nRefFrames = 4
+  FastME = 0
 
   # bits_in_each_frame = []
 
