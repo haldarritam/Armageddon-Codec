@@ -235,6 +235,150 @@ def intra_prediction(frame, y_idx, x_idx):
 
   return [mode], left_edge_block
 
+def intra_prediction_vbs(frame, y_idx, x_idx, Q, sub_Q, lambda_const):
+
+  # print(frame[y_idx][x_idx])
+  # print("---------------------------------")
+  # print("---------------------------------")
+
+  mode_block, intra_block, RDO_block = intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const)
+
+  mode_0, intra_sub_block_0, RDO_sub_block_0 = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, 0)
+
+  mode_1, intra_sub_block_1, RDO_sub_block_1 = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, 1)
+
+  mode_2, intra_sub_block_2, RDO_sub_block_2 = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, 2)
+
+  mode_3, intra_sub_block_3, RDO_sub_block_3 = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, 3)
+
+  cumulative_sub_RDO = RDO_sub_block_0 + RDO_sub_block_1 + RDO_sub_block_2 + RDO_sub_block_3
+
+  if (RDO_block < cumulative_sub_RDO):
+    return [0], [mode_block], intra_block
+  else:
+    conc_0 = np.concatenate((intra_sub_block_0, intra_sub_block_1), axis=1)
+    conc_1 = np.concatenate((intra_sub_block_2, intra_sub_block_3), axis=1)
+    intra_sub_block = np.concatenate((conc_0, conc_1), axis=0)
+
+    return [1], [mode_0, mode_1, mode_2, mode_3], intra_sub_block
+
+def intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const):
+
+  i = frame.shape[2]
+
+  grey = 128
+
+  top_edge_block = np.empty((i,i), dtype=int)
+  left_edge_block = np.empty((i,i), dtype=int)
+
+  mode = 0 #Horizontal
+
+  top_edge = np.full((1, i), grey)
+  left_edge = np.full((i, 1), grey)
+
+  if ((y_idx - 1) >= 0):
+    top_edge = frame[y_idx - 1][x_idx][-1, :]
+
+  if ((x_idx - 1) >= 0):
+    left_edge = frame[y_idx][x_idx - 1][:, -1].reshape((i, 1))
+
+  top_edge_block[:,:] = top_edge
+  left_edge_block[:, :] = left_edge
+
+  RDO_top  = calc_RDO(top_edge_block, frame[y_idx][x_idx], Q, lambda_const)
+  RDO_left = calc_RDO(left_edge_block, frame[y_idx][x_idx], Q, lambda_const)
+
+  # print(frame[y_idx][x_idx])
+  # print("---------------------------------")
+  # print("---------------------------------")
+  # print(top_edge_block)
+  # print("---------------------------------")
+  # print("---------------------------------")
+  # print(left_edge_block)
+  # print("---------------------------------")
+  # print("---------------------------------")
+
+  if (RDO_top < RDO_left):
+    mode = 1
+    return mode, top_edge_block, RDO_top
+
+  return mode, left_edge_block, RDO_left
+
+def intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, sub):
+
+  i = frame.shape[2]
+
+  if (i != 4 and i != 8 and i != 16):
+    print("Block size should be 4, 8 or 16 when VBS enabled!")
+    print("Exiting...")
+    exit()
+
+  i = int(i / 2)
+  
+  block = frame[y_idx][x_idx]
+
+  sub_block = []
+  sub_block += [block[0: i, 0: i]]
+  sub_block += [block[0: i, i: i + i]]
+  sub_block += [block[i: i + i, 0: i]]
+  sub_block += [block[i: i + i, i: i + i]]
+
+  sub_head_idy = [y_idx, y_idx, y_idx + i, y_idx + i]
+  sub_head_idx = [x_idx, x_idx + i, x_idx, x_idx + i]
+
+  grey = 128
+
+  top_edge_block = np.empty((i,i), dtype=int)
+  left_edge_block = np.empty((i,i), dtype=int)
+
+  mode = 0 #Horizontal
+
+  top_edge = np.full((1, i), grey)
+  left_edge = np.full((i, 1), grey)
+
+  if ((sub_head_idy[sub] - 1) >= 0):
+    if (sub == 0):
+      temp = frame[y_idx - 1][x_idx][-1, :]
+      top_edge = temp[:len(temp)//2]
+    elif (sub == 1):
+      temp = frame[y_idx - 1][x_idx][-1, :]
+      top_edge = temp[len(temp) // 2 :]
+    elif (sub == 2):
+      top_edge = sub_block[0][len(sub_block[0]) - 1]
+    elif (sub == 3):
+      top_edge = sub_block[1][len(sub_block[1]) - 1]
+
+  if ((sub_head_idx[sub] - 1) >= 0):
+    if (sub == 0):
+      temp = frame[y_idx][x_idx - 1][:, -1]
+      left_edge = temp[:len(temp)//2].reshape((i, 1))
+    elif (sub == 1):
+      left_edge = sub_block[0][:,(len(sub_block[0]) - 1)].reshape((i, 1))
+    elif (sub == 2):
+      temp = frame[y_idx][x_idx - 1][:, -1]
+      left_edge = temp[len(temp) // 2 :].reshape((i, 1))
+    elif (sub == 3):
+      left_edge = sub_block[2][:,(len(sub_block[2]) - 1)].reshape((i, 1))
+
+  top_edge_block[:,:] = top_edge
+  left_edge_block[:, :] = left_edge
+
+  RDO_top  = calc_RDO(top_edge_block, sub_block[sub], sub_Q, lambda_const)
+  RDO_left = calc_RDO(left_edge_block, sub_block[sub], sub_Q, lambda_const)
+
+  # print(top_edge_block)
+  # print("---------------------------------")
+  # print("---------------------------------")
+  # print(left_edge_block)
+  # print("---------------------------------")
+  # print("---------------------------------")
+
+  if (RDO_top < RDO_left):
+    mode = 1
+    return mode, top_edge_block, RDO_top
+
+  return mode, left_edge_block, RDO_left
+
 def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
   if (FMEEnable):
     if ((mv[0] % 2 == 0) and (mv[1] % 2 == 0)): # none fractional
@@ -456,9 +600,34 @@ def differential_encoder_decoder_vbs(modes_mv_block, is_p_block, not_first_bl):
           break
   else:
     if (not_first_bl):
-      return_data += modes_mv_block[-2] - modes_mv_block[-1]
+      for idx, mv in reversed(list(enumerate(modes_mv_block))):
+        
+        if (mv == [0]):
+          return_data += [modes_mv_block[idx-1] - modes_mv_block[idx][0]]
+          return_data += [modes_mv_block[idx][0] - modes_mv_block[idx+1]]
+          break
+        
+        elif (mv == [1]):
+          return_data += [modes_mv_block[idx-1] - modes_mv_block[idx][0]]
+          return_data += [modes_mv_block[idx][0] - modes_mv_block[idx+1]]
+          return_data += [modes_mv_block[idx+1] - modes_mv_block[idx+2]]
+          return_data += [modes_mv_block[idx+2] - modes_mv_block[idx+3]]
+          return_data += [modes_mv_block[idx+3] - modes_mv_block[idx+4]]
+          break
+        
     else:
-      return_data += 0 - modes_mv_block[-1]
+      for idx, mv in reversed(list(enumerate(modes_mv_block))):          
+        if (mv == [0]):
+          return_data += [0 - modes_mv_block[idx][0]]
+          return_data += [modes_mv_block[idx][0] - modes_mv_block[idx+1]]
+          break 
+        elif (mv == [1]):
+          return_data += [0 - modes_mv_block[idx][0]]
+          return_data += [modes_mv_block[idx][0] - modes_mv_block[idx+1]]
+          return_data += [modes_mv_block[idx+1] - modes_mv_block[idx+2]]
+          return_data += [modes_mv_block[idx+2] - modes_mv_block[idx+3]]
+          return_data += [modes_mv_block[idx+3] - modes_mv_block[idx+4]]
+          break
 
   return return_data
 
@@ -641,7 +810,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   if (nRefFrames > (i_period - 1)):
     print("nRefFrames is incompatible with i_period.")
     return
-
   print("----------------------------------------------")
   print("----------------------------------------------")
   print("Q4 Encoder Parameters-")
@@ -656,6 +824,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   print("QP: ", QP)
   print("i_period: ", i_period)
   print("nRefFrames: ", nRefFrames)
+  print("VBSEnable: ", VBSEnable)
+  print("FMEEnable: ", FMEEnable)
   print("----------------------------------------------")
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
@@ -726,8 +896,13 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
         else:
           # Calculate mode (intra)
-          temp_mode, predicted_block = intra_prediction(new_reconstructed, bl_y_it, bl_x_it)
-          modes_mv_block += temp_mode
+          if (VBSEnable):
+            split, temp_mode, predicted_block = intra_prediction_vbs(new_reconstructed, bl_y_it, bl_x_it, Q, sub_Q, lambda_const)
+            modes_mv_block += [split]
+            modes_mv_block += temp_mode
+          else:
+            temp_mode, predicted_block = intra_prediction(new_reconstructed, bl_y_it, bl_x_it)
+            modes_mv_block += temp_mode
           
       #  Calculate Residual Matrix
         residual_matrix[frame][bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], predicted_block)
@@ -755,7 +930,17 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
             differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][1])
             differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][2])
         else:
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
+          if (VBSEnable):
+            differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[0])
+            if (split == [0]):
+              differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[1])
+            else:
+              differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[1])
+              differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[2])
+              differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[3])
+              differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[4])
+          else:
+            differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
 
         # Scanning/RLE/writing (QTC)        
         scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
@@ -964,9 +1149,26 @@ def decoder(in_file, out_file):
         QTC_recovered, lin_it = I_scanning(qtc, i, lin_it)
              
         if (is_i_frame):
-          prev_mode = prev_mode - mdiff[lin_idx]
-          modes_mv += [prev_mode]
-          lin_idx += 1
+          if (VBSEnable):
+            prev_mode = prev_mode - mdiff[lin_idx]
+            vbs_mode = prev_mode
+            modes_mv += [vbs_mode]
+            lin_idx += 1
+
+            if (vbs_mode == 0):
+              prev_mode = prev_mode - mdiff[lin_idx]
+              modes_mv += [prev_mode]
+              lin_idx += 1
+            else:
+              for _ in range(4):
+                prev_mode = prev_mode - mdiff[lin_idx]
+                modes_mv += [prev_mode]
+                lin_idx += 1
+
+          else:
+            prev_mode = prev_mode - mdiff[lin_idx]
+            modes_mv += [prev_mode]
+            lin_idx += 1
 
         else:
           if (VBSEnable):
@@ -1050,14 +1252,14 @@ if __name__ == "__main__":
   in_file = "./videos/black_and_white.yuv"
   out_file = "./temp/assign2_vbs_QP0.far"
 
-  number_frames = 10
+  number_frames = 4
   y_res = 288
   x_res = 352
   i = 16
   r = 2
   QP = 0  # from 0 to (log_2(i) + 7)
-  i_period = 50
-  nRefFrames = 2
+  i_period = 2
+  nRefFrames = 1
   FMEEnable = False
   VBSEnable = True
 
@@ -1067,7 +1269,7 @@ if __name__ == "__main__":
   decoder_outfile = "./videos/q4_decoded.yuv"
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable)
-  decoder(decoder_infile, decoder_outfile)
+  # decoder(decoder_infile, decoder_outfile)
   
   # y_res = 3
   # x_res = 3
