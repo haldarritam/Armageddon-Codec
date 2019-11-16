@@ -235,22 +235,22 @@ def intra_prediction(frame, y_idx, x_idx):
 
   return [mode], left_edge_block
 
-def intra_prediction_vbs(frame, y_idx, x_idx, Q, sub_Q, lambda_const):
+def intra_prediction_vbs(frame, block, y_idx, x_idx, Q, sub_Q, lambda_const):
 
   # print(frame[y_idx][x_idx])
   # print("---------------------------------")
   # print("---------------------------------")
 
-  mode_block, intra_block, RDO_block = intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const)
+  mode_block, intra_block, RDO_block = intra_prediction_block(frame, block, y_idx, x_idx, Q, lambda_const)
 
-  sub_mode, sub_predicted_block, RDO_sub_block = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const)
+  sub_mode, sub_predicted_block, RDO_sub_block = intra_prediction_sub_block(frame, block, y_idx, x_idx, sub_Q, lambda_const)
 
   if (RDO_block < RDO_sub_block):
     return [0], [mode_block], intra_block
   else:
     return [1], sub_mode, sub_predicted_block
 
-def intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const):
+def intra_prediction_block(frame, block, y_idx, x_idx, Q, lambda_const):
 
   i = frame.shape[2]
 
@@ -273,18 +273,8 @@ def intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const):
   top_edge_block[:,:] = top_edge
   left_edge_block[:, :] = left_edge
 
-  RDO_top  = calc_RDO(top_edge_block, frame[y_idx][x_idx], Q, lambda_const)
-  RDO_left = calc_RDO(left_edge_block, frame[y_idx][x_idx], Q, lambda_const)
-
-  # print(frame[y_idx][x_idx])
-  # print("---------------------------------")
-  # print("---------------------------------")
-  # print(top_edge_block)
-  # print("---------------------------------")
-  # print("---------------------------------")
-  # print(left_edge_block)
-  # print("---------------------------------")
-  # print("---------------------------------")
+  RDO_top  = calc_RDO(top_edge_block, block, Q, lambda_const)
+  RDO_left = calc_RDO(left_edge_block, block, Q, lambda_const)
 
   if (RDO_top < RDO_left):
     mode = 1
@@ -292,7 +282,7 @@ def intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const):
 
   return mode, left_edge_block, RDO_left
 
-def intra_prediction_sub_block(frame, bl_y_it, bl_x_it, sub_Q, lambda_const):
+def intra_prediction_sub_block(frame, block, bl_y_it, bl_x_it, sub_Q, lambda_const):
 
   i = frame.shape[2]
 
@@ -302,8 +292,6 @@ def intra_prediction_sub_block(frame, bl_y_it, bl_x_it, sub_Q, lambda_const):
     exit()
 
   i = int(i / 2)
-  
-  block = frame[bl_y_it][bl_x_it]
 
   sub_block = []
   sub_block += [block[0: i, 0: i]]
@@ -312,7 +300,6 @@ def intra_prediction_sub_block(frame, bl_y_it, bl_x_it, sub_Q, lambda_const):
   sub_block += [block[i: i + i, i: i + i]]
 
   grey = 128
-  predicted_sub = []
 
   lefted_sub_block = np.empty((i, i), dtype=int)
   topped_sub_block = np.empty((i, i), dtype=int)
@@ -341,25 +328,20 @@ def intra_prediction_sub_block(frame, bl_y_it, bl_x_it, sub_Q, lambda_const):
   predicted_mode = []
   total_RDO = 0
 
-  temp_pred = []
+  np_predicted_sub = np.zeros((4, i, i), dtype=int)
 
   for y_idx in range(2):
     for x_idx in range(2):
-
-      print("*************  " + str(lin_it) + "  ****************")
+      temp = 0
 
       lefted_sub_block[:, :] = left_edge[y_idx]              
-      topped_sub_block[:, :] = top_edge[x_idx] 
-
-      #print("lefted_sub_block", lefted_sub_block)
-      #print("topped_sub_block", topped_sub_block)
+      topped_sub_block[:, :] = top_edge[x_idx]
 
 
       lefted_RDO, lefted_reconstructed = calc_RDO_intra_sub(lefted_sub_block, sub_block[lin_it], sub_Q, lambda_const)
 
       topped_RDO, topped_reconstructed = calc_RDO_intra_sub(topped_sub_block, sub_block[lin_it], sub_Q, lambda_const)
 
-      lin_it += 1
 
       if (lefted_RDO < topped_RDO):
         top_edge[x_idx] = lefted_reconstructed[-1, :]
@@ -367,11 +349,7 @@ def intra_prediction_sub_block(frame, bl_y_it, bl_x_it, sub_Q, lambda_const):
 
         total_RDO += lefted_RDO
         predicted_mode += [0]
-        predicted_sub.append(lefted_sub_block)
-        temp_pred += [lefted_sub_block]
-
-        print("Lefted")
-        print(lefted_sub_block)
+        temp = lefted_sub_block
 
       else:
         top_edge[x_idx] = topped_reconstructed[-1, :]
@@ -379,25 +357,14 @@ def intra_prediction_sub_block(frame, bl_y_it, bl_x_it, sub_Q, lambda_const):
         
         total_RDO += topped_RDO
         predicted_mode += [1]
-        predicted_sub.append(topped_sub_block)
-        temp_pred += [topped_sub_block]
+        temp = topped_sub_block
 
-        print("Topped")
-        print(topped_sub_block)
-
-      print("PREDICTED_SUB")
-      print(predicted_sub)
+      np_predicted_sub[lin_it] = temp
   
-  conc_0 = np.concatenate((predicted_sub[0], predicted_sub[1]), axis=1)
-  conc_1 = np.concatenate((predicted_sub[2], predicted_sub[3]), axis=1)
+      lin_it += 1
 
-  #print("predicted_sub_0", predicted_sub[0])
-  #print("predicted_sub_1", predicted_sub[1])
-  #print("predicted_sub_2", predicted_sub[2])
-  #print("predicted_sub_3", predicted_sub[3])
-
-  #print("conc_0", conc_0)
-  #print("conc_1", conc_1)
+  conc_0 = np.concatenate((np_predicted_sub[0], np_predicted_sub[1]), axis=1)
+  conc_1 = np.concatenate((np_predicted_sub[2], np_predicted_sub[3]), axis=1)
   predicted_block = np.concatenate((conc_0, conc_1), axis=0)
 
   return predicted_mode, predicted_block, total_RDO
@@ -615,7 +582,7 @@ def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEna
             lin_it += 1
 
             if (current_mode == 0):
-              sub_block[:, :] = left_edge[y_idx]              
+              sub_block[:, :] = left_edge[y_idx]             
               top_edge[x_idx] = sub_block[-1, :]
               left_edge[y_idx] = sub_block[:, -1]
               
@@ -656,11 +623,8 @@ def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, 
 
   # print(modes_mv)
 
-  if(is_p_block):
-    # predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, FMEEnable)
-    
+  if(is_p_block):    
     split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, VBSEnable, FMEEnable)
-
   else:
     split, predicted_block = extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEnable)
 
@@ -1041,13 +1005,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         else:
           # Calculate mode (intra)
           if (VBSEnable):
-            split, temp_mode, predicted_block = intra_prediction_vbs(new_reconstructed, bl_y_it, bl_x_it, Q, sub_Q, lambda_const)
+            split, temp_mode, predicted_block = intra_prediction_vbs(new_reconstructed, bl_y_frame[frame][bl_y_it][bl_x_it], bl_y_it, bl_x_it, Q, sub_Q, lambda_const)
             modes_mv_block += [split]
             modes_mv_block += temp_mode
-
-            print(split)
-            print(predicted_block)
-            exit()
           else:
             temp_mode, predicted_block = intra_prediction(new_reconstructed, bl_y_it, bl_x_it)
             modes_mv_block += temp_mode
@@ -1416,8 +1376,8 @@ if __name__ == "__main__":
   decoder_infile = out_file
   decoder_outfile = "./videos/q4_decoded.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable)
-  # decoder(decoder_infile, decoder_outfile)
+  # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable)
+  decoder(decoder_infile, decoder_outfile)
   
   # y_res = 3
   # x_res = 3
