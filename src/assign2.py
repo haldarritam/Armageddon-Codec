@@ -243,24 +243,12 @@ def intra_prediction_vbs(frame, y_idx, x_idx, Q, sub_Q, lambda_const):
 
   mode_block, intra_block, RDO_block = intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const)
 
-  mode_0, intra_sub_block_0, RDO_sub_block_0 = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, 0)
+  sub_mode, sub_predicted_block, RDO_sub_block = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const)
 
-  mode_1, intra_sub_block_1, RDO_sub_block_1 = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, 1)
-
-  mode_2, intra_sub_block_2, RDO_sub_block_2 = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, 2)
-
-  mode_3, intra_sub_block_3, RDO_sub_block_3 = intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, 3)
-
-  cumulative_sub_RDO = RDO_sub_block_0 + RDO_sub_block_1 + RDO_sub_block_2 + RDO_sub_block_3
-
-  if (RDO_block < cumulative_sub_RDO):
+  if (RDO_block < RDO_sub_block):
     return [0], [mode_block], intra_block
   else:
-    conc_0 = np.concatenate((intra_sub_block_0, intra_sub_block_1), axis=1)
-    conc_1 = np.concatenate((intra_sub_block_2, intra_sub_block_3), axis=1)
-    intra_sub_block = np.concatenate((conc_0, conc_1), axis=0)
-
-    return [1], [mode_0, mode_1, mode_2, mode_3], intra_sub_block
+    return [1], sub_mode, sub_predicted_block
 
 def intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const):
 
@@ -304,7 +292,7 @@ def intra_prediction_block(frame, y_idx, x_idx, Q, lambda_const):
 
   return mode, left_edge_block, RDO_left
 
-def intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, sub):
+def intra_prediction_sub_block(frame, bl_y_it, bl_x_it, sub_Q, lambda_const):
 
   i = frame.shape[2]
 
@@ -315,7 +303,7 @@ def intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, sub):
 
   i = int(i / 2)
   
-  block = frame[y_idx][x_idx]
+  block = frame[bl_y_it][bl_x_it]
 
   sub_block = []
   sub_block += [block[0: i, 0: i]]
@@ -323,61 +311,96 @@ def intra_prediction_sub_block(frame, y_idx, x_idx, sub_Q, lambda_const, sub):
   sub_block += [block[i: i + i, 0: i]]
   sub_block += [block[i: i + i, i: i + i]]
 
-  sub_head_idy = [y_idx, y_idx, y_idx + i, y_idx + i]
-  sub_head_idx = [x_idx, x_idx + i, x_idx, x_idx + i]
-
   grey = 128
+  predicted_sub = []
 
-  top_edge_block = np.empty((i,i), dtype=int)
-  left_edge_block = np.empty((i,i), dtype=int)
+  lefted_sub_block = np.empty((i, i), dtype=int)
+  topped_sub_block = np.empty((i, i), dtype=int)
 
-  mode = 0 #Horizontal
+  top_edge = [] 
+  left_edge = []
 
-  top_edge = np.full((1, i), grey)
-  left_edge = np.full((i, 1), grey)
+  top_edge_1 = np.full((1, i), grey)
+  top_edge_2 = np.full((1, i), grey)
 
-  if ((sub_head_idy[sub] - 1) >= 0):
-    if (sub == 0):
-      temp = frame[y_idx - 1][x_idx][-1, :]
-      top_edge = temp[:len(temp)//2]
-    elif (sub == 1):
-      temp = frame[y_idx - 1][x_idx][-1, :]
-      top_edge = temp[len(temp) // 2 :]
-    elif (sub == 2):
-      top_edge = sub_block[0][len(sub_block[0]) - 1]
-    elif (sub == 3):
-      top_edge = sub_block[1][len(sub_block[1]) - 1]
+  left_edge_1 = np.full((i, 1), grey)
+  left_edge_2 = np.full((i, 1), grey)
 
-  if ((sub_head_idx[sub] - 1) >= 0):
-    if (sub == 0):
-      temp = frame[y_idx][x_idx - 1][:, -1]
-      left_edge = temp[:len(temp)//2].reshape((i, 1))
-    elif (sub == 1):
-      left_edge = sub_block[0][:,(len(sub_block[0]) - 1)].reshape((i, 1))
-    elif (sub == 2):
-      temp = frame[y_idx][x_idx - 1][:, -1]
-      left_edge = temp[len(temp) // 2 :].reshape((i, 1))
-    elif (sub == 3):
-      left_edge = sub_block[2][:,(len(sub_block[2]) - 1)].reshape((i, 1))
+  if ((bl_y_it - 1) >= 0):
+    top_edge_1 = frame[bl_y_it - 1][bl_x_it][-1, 0:i]
+    top_edge_2 = frame[bl_y_it - 1][bl_x_it][-1, i:i+i]
+  if ((bl_x_it - 1) >= 0):
+    left_edge_1 = frame[bl_y_it][bl_x_it - 1][0:i, -1].reshape((i, 1))
+    left_edge_2 = frame[bl_y_it][bl_x_it - 1][i: i + i, -1].reshape((i, 1))
+    
+  top_edge += [top_edge_1, top_edge_2]
+  left_edge += [left_edge_1, left_edge_2]
 
-  top_edge_block[:,:] = top_edge
-  left_edge_block[:, :] = left_edge
+  lin_it = 0
 
-  RDO_top  = calc_RDO(top_edge_block, sub_block[sub], sub_Q, lambda_const)
-  RDO_left = calc_RDO(left_edge_block, sub_block[sub], sub_Q, lambda_const)
+  predicted_mode = []
+  total_RDO = 0
 
-  # print(top_edge_block)
-  # print("---------------------------------")
-  # print("---------------------------------")
-  # print(left_edge_block)
-  # print("---------------------------------")
-  # print("---------------------------------")
+  temp_pred = []
 
-  if (RDO_top < RDO_left):
-    mode = 1
-    return mode, top_edge_block, RDO_top
+  for y_idx in range(2):
+    for x_idx in range(2):
 
-  return mode, left_edge_block, RDO_left
+      print("*************  " + str(lin_it) + "  ****************")
+
+      lefted_sub_block[:, :] = left_edge[y_idx]              
+      topped_sub_block[:, :] = top_edge[x_idx] 
+
+      #print("lefted_sub_block", lefted_sub_block)
+      #print("topped_sub_block", topped_sub_block)
+
+
+      lefted_RDO, lefted_reconstructed = calc_RDO_intra_sub(lefted_sub_block, sub_block[lin_it], sub_Q, lambda_const)
+
+      topped_RDO, topped_reconstructed = calc_RDO_intra_sub(topped_sub_block, sub_block[lin_it], sub_Q, lambda_const)
+
+      lin_it += 1
+
+      if (lefted_RDO < topped_RDO):
+        top_edge[x_idx] = lefted_reconstructed[-1, :]
+        left_edge[y_idx] = lefted_reconstructed[:, -1]
+
+        total_RDO += lefted_RDO
+        predicted_mode += [0]
+        predicted_sub.append(lefted_sub_block)
+        temp_pred += [lefted_sub_block]
+
+        print("Lefted")
+        print(lefted_sub_block)
+
+      else:
+        top_edge[x_idx] = topped_reconstructed[-1, :]
+        left_edge[y_idx] = topped_reconstructed[:, -1]
+        
+        total_RDO += topped_RDO
+        predicted_mode += [1]
+        predicted_sub.append(topped_sub_block)
+        temp_pred += [topped_sub_block]
+
+        print("Topped")
+        print(topped_sub_block)
+
+      print("PREDICTED_SUB")
+      print(predicted_sub)
+  
+  conc_0 = np.concatenate((predicted_sub[0], predicted_sub[1]), axis=1)
+  conc_1 = np.concatenate((predicted_sub[2], predicted_sub[3]), axis=1)
+
+  #print("predicted_sub_0", predicted_sub[0])
+  #print("predicted_sub_1", predicted_sub[1])
+  #print("predicted_sub_2", predicted_sub[2])
+  #print("predicted_sub_3", predicted_sub[3])
+
+  #print("conc_0", conc_0)
+  #print("conc_1", conc_1)
+  predicted_block = np.concatenate((conc_0, conc_1), axis=0)
+
+  return predicted_mode, predicted_block, total_RDO
 
 def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
   if (FMEEnable):
@@ -423,6 +446,15 @@ def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, VBSEnable, FMEEna
     # print(modes_mv)
     for idx, mv in reversed(list(enumerate(modes_mv))):
       if (mv == 0):
+        # print(modes_mv[idx + 1])
+        # print(modes_mv[idx + 2])
+        # print(modes_mv[idx + 3])
+        # print(modes_mv[idx + 4])
+        # print(modes_mv[idx + 5])
+        # print(modes_mv[idx + 6])
+        # print(modes_mv[idx + 7])
+        # print(modes_mv[idx + 8])
+        # print(modes_mv[idx + 9])
         extracted = extract_predicted_block(frame_buff, head_idy, head_idx, modes_mv[idx + 1], i, FMEEnable)
         
         return 0, extracted
@@ -516,17 +548,89 @@ def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext
   new_reconstructed = decoder_core(residual_matrix, reconstructed, mv)
 
   return new_reconstructed
+def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEnable):
 
-def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, is_p_block, VBSEnable, FMEEnable):
-
+  # print("Here")
   grey = 128
   predicted_block = np.empty((i, i), dtype=int)
   split = 0
-  if(is_p_block):
-          # predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, FMEEnable)
-          
-          split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, VBSEnable, FMEEnable)
 
+  if (VBSEnable):
+    # print(len(modes_mv))
+
+    for idx, mv in reversed(list(enumerate(modes_mv))):
+
+      if (modes_mv[idx] == [0]):
+        modes_mv = modes_mv[idx+1]
+        top_edge = np.full((1, i), grey)
+        left_edge = np.full((i, 1), grey)
+
+        predicted_block[:,:] = top_edge
+
+        if ((modes_mv == 1) and ((bl_y_it - 1) >= 0)):
+          top_edge = new_reconstructed[bl_y_it - 1][bl_x_it][-1, :]
+          predicted_block[:,:] = top_edge
+
+        if ((modes_mv == 0) and ((bl_x_it - 1) >= 0)):
+          left_edge = new_reconstructed[bl_y_it][bl_x_it - 1][:, -1].reshape((i, 1))
+          predicted_block[:, :] = left_edge
+
+        break
+
+      elif (modes_mv[idx] == [1]):
+
+        split = 1
+
+        i = int(i / 2)
+        predicted_sub = []
+        sub_block = np.empty((i, i), dtype=int)
+
+        # print(i, sub_block.shape)
+
+        top_edge = [] 
+        left_edge = []
+
+        top_edge_1 = np.full((1, i), grey)
+        top_edge_2 = np.full((1, i), grey)
+
+        left_edge_1 = np.full((i, 1), grey)
+        left_edge_2 = np.full((i, 1), grey)
+
+        if ((bl_y_it - 1) >= 0):
+          top_edge_1 = new_reconstructed[bl_y_it - 1][bl_x_it][-1, 0:i]
+          top_edge_2 = new_reconstructed[bl_y_it - 1][bl_x_it][-1, i:i+i]
+        if ((bl_x_it - 1) >= 0):
+          left_edge_1 = new_reconstructed[bl_y_it][bl_x_it - 1][0:i, -1].reshape((i, 1))
+          left_edge_2 = new_reconstructed[bl_y_it][bl_x_it - 1][i: i + i, -1].reshape((i, 1))
+          
+        top_edge += [top_edge_1, top_edge_2]
+        left_edge += [left_edge_1, left_edge_2]
+
+        lin_it = 1
+
+        for y_idx in range(2):
+          for x_idx in range(2):
+
+            current_mode = modes_mv[idx + lin_it]
+            lin_it += 1
+
+            if (current_mode == 0):
+              sub_block[:, :] = left_edge[y_idx]              
+              top_edge[x_idx] = sub_block[-1, :]
+              left_edge[y_idx] = sub_block[:, -1]
+              
+            elif (current_mode == 1):
+              sub_block[:, :] = top_edge[x_idx]              
+              top_edge[x_idx] = sub_block[-1, :]
+              left_edge[y_idx] = sub_block[:, -1]
+
+            predicted_sub += [sub_block]
+        
+        conc_0 = np.concatenate((predicted_sub[0], predicted_sub[1]), axis=1)
+        conc_1 = np.concatenate((predicted_sub[2], predicted_sub[3]), axis=1)
+        predicted_block = np.concatenate((conc_0, conc_1), axis=0)
+
+        break        
   else:
     modes_mv = modes_mv[-1]
     top_edge = np.full((1, i), grey)
@@ -541,6 +645,24 @@ def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, 
     if ((modes_mv == 0) and ((bl_x_it - 1) >= 0)):
       left_edge = new_reconstructed[bl_y_it][bl_x_it - 1][:, -1].reshape((i, 1))
       predicted_block[:, :] = left_edge
+
+  return split, predicted_block
+  
+def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, is_p_block, VBSEnable, FMEEnable):
+
+  grey = 128
+  predicted_block = np.empty((i, i), dtype=int)
+  split = 0
+
+  # print(modes_mv)
+
+  if(is_p_block):
+    # predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, FMEEnable)
+    
+    split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, VBSEnable, FMEEnable)
+
+  else:
+    split, predicted_block = extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEnable)
 
   return split, predicted_block
 
@@ -750,6 +872,28 @@ def I_scanning(qtc, i, lin_it):
         lin_it += 1
   return bl_y_frame, lin_it   
 
+def calc_RDO_intra_sub(pred_block, cur_block, Q, lambda_coeff):
+  residual = np.subtract(cur_block, pred_block, dtype=int)
+  transformed = dct2D(residual)
+  quantized = quantize_dct(transformed, Q)
+  scanned = scanning(quantized)
+  rled_block = RLE(scanned)
+
+  qtc_bitstream = ''
+  for rled in rled_block:
+    qtc_bitstream += exp_golomb_coding(int(rled))
+
+  R = len(qtc_bitstream) # Number of bits needed
+
+  D = np.sum(np.abs(residual))  # SAD
+  
+  J = D + (lambda_coeff * R)  # RDO
+
+  approx_residual = idct2D(np.multiply(quantized, Q))
+  recontructed_block = np.add(approx_residual, pred_block)
+  
+  return J, recontructed_block
+
 def calc_RDO(pred_block, cur_block, Q, lambda_coeff):
   residual = np.subtract(cur_block, pred_block, dtype=int)
   transformed = dct2D(residual)
@@ -900,6 +1044,10 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
             split, temp_mode, predicted_block = intra_prediction_vbs(new_reconstructed, bl_y_it, bl_x_it, Q, sub_Q, lambda_const)
             modes_mv_block += [split]
             modes_mv_block += temp_mode
+
+            print(split)
+            print(predicted_block)
+            exit()
           else:
             temp_mode, predicted_block = intra_prediction(new_reconstructed, bl_y_it, bl_x_it)
             modes_mv_block += temp_mode
@@ -1152,7 +1300,7 @@ def decoder(in_file, out_file):
           if (VBSEnable):
             prev_mode = prev_mode - mdiff[lin_idx]
             vbs_mode = prev_mode
-            modes_mv += [vbs_mode]
+            modes_mv += [[vbs_mode]]
             lin_idx += 1
 
             if (vbs_mode == 0):
