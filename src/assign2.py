@@ -64,8 +64,7 @@ def find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, o
 
 def find_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled, best_RDO_block, lambda_const, Q, rec_buffer_pos = -1):
     mv = (0, 0, 0)
-    best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1)
-    up_r = r
+    up_r = r    
     
     if (FMEEnabled):
       up_r = 2 * r
@@ -83,7 +82,8 @@ def find_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
         if (rec_buffer_pos != -1 and buff_idx == rec_buffer_pos) or (rec_buffer_pos == -1):
           for y_dir in range(negative, positive):
               for x_dir in range(negative, positive):
-                  if((origin != 1 and (check%2)==0) or origin == 1):
+                  if ((origin != 1 and (check % 2) == 0) or origin == 1):
+                    
                       if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
 
                           extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
@@ -149,6 +149,28 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
 
   return extracted
 
+def RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO):
+
+  RDO = calc_RDO(extracted, block, Q, lambda_const)
+
+  if (RDO < best_RDO):
+    best_RDO = RDO
+    mv = (y_dir, x_dir, buff_idx)
+  elif (RDO == best_RDO):
+    if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
+      best_RDO = RDO
+      mv = (y_dir, x_dir, buff_idx)
+    elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
+      if (y_dir < mv[0]):
+        best_RDO = RDO
+        mv = (y_dir, x_dir, buff_idx)
+      elif (y_dir == mv[0]):
+        if (x_dir < mv[1]):
+          best_RDO = RDO
+          mv = (y_dir, x_dir, buff_idx)
+
+  return best_RDO, mv
+
 def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME):
 
     if(FastME):
@@ -206,31 +228,49 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
       mv_non_fme, sad_non_fme = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled)
       return [mv_non_fme]
 
+def fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block):
 
-def RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO):
+    if(FastME):
+      origin = 1
+      iterate = 1
+      mv_accum = []
+      mv_new = ()
+      mv_test = ()
 
-  RDO = calc_RDO(extracted, block, Q, lambda_const)
+      mv_new, sad_new = find_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled, best_RDO_block, lambda_const, Q)
+      
+      origin = 2
 
-  if (RDO < best_RDO):
-    best_RDO = RDO
-    mv = (y_dir, x_dir, buff_idx)
-  elif (RDO == best_RDO):
-    if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
-      best_RDO = RDO
-      mv = (y_dir, x_dir, buff_idx)
-    elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
-      if (y_dir < mv[0]):
-        best_RDO = RDO
-        mv = (y_dir, x_dir, buff_idx)
-      elif (y_dir == mv[0]):
-        if (x_dir < mv[1]):
-          best_RDO = RDO
-          mv = (y_dir, x_dir, buff_idx)
+      if mv_new[0] == 0 and mv_new[1] == 0:
+        return mv_new, sad_new
 
-  return best_RDO, mv
+      head_idy += mv_new[0]
+      head_idx += mv_new[1]
+
+      if nRefFrames > 1:
+        ref_frame = mv_new[2]
+      else:
+        ref_frame = -1
+
+      while(iterate):          
+          mv_test, sad_test = find_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled, best_RDO_block, lambda_const, Q)
+
+          if(sad_test < sad_new):
+              sad_new = sad_test
+              head_idy += mv_test[0]
+              head_idx += mv_test[1]
+              mv_new = (mv_new[0]+mv_test[0], mv_new[1]+mv_test[1], ref_frame)
+          else:
+              iterate = 0
+
+      return mv_new, sad_new
+    else:
+      origin = 1
+      mv_non_fastme, sad_non_fastme = find_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled, best_RDO_block, lambda_const, Q)
+      return mv_non_fastme, sad_non_fastme
 
 
-def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled):
+def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled, FastME):
 
   if (i != 4 and i != 8 and i != 16):
     print("Block size should be 4, 8 or 16 when VBS enabled!")
@@ -281,27 +321,11 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
   mv = (0, 0, 0)
   sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
 
-  for buff_idx, reconstructed in enumerate(rec_buffer):
-    # Block prediction
-    for y_dir in range(-up_r, (up_r + 1)):
-      for x_dir in range(-up_r, (up_r + 1)):
-
-        if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
-
-          extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
-
-          best_RDO_block, mv = RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO_block)
+  mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block)
 
     # Sub-block prediction
-    for sub_idx in range(4):
-      for y_dir in range(-up_r, (up_r + 1)):
-        for x_dir in range(-up_r, (up_r + 1)):
-
-          if ((sub_head_idy[sub_idx] + y_dir) >= 0 and (sub_head_idy[sub_idx] + y_dir + sub_i) < ext_y_res and (sub_head_idx[sub_idx] + x_dir) >= 0 and (sub_head_idx[sub_idx] + x_dir + sub_i) < ext_x_res):
-
-            extracted_sub = FME_extraction(FMEEnabled, sub_i, sub_head_idy[sub_idx], sub_head_idx[sub_idx], y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
-
-            best_RDO_sub[sub_idx], sub_mv[sub_idx] = RDO_sel(extracted_sub, sub_block[sub_idx], sub_Q, lambda_const, y_dir, x_dir, buff_idx, sub_mv[sub_idx], best_RDO_sub[sub_idx])
+  for sub_idx in range(4):
+    sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx], sub_head_idx[sub_idx], ext_y_res, ext_x_res, sub_i, FMEEnabled, FastME, lambda_const, sub_Q, best_RDO_sub[sub_idx])
 
   RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
 
@@ -309,7 +333,7 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
     return [0, mv]
   else:
     return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]]
-    
+
 # def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled):
 
 #   if (i != 4 and i != 8 and i != 16):
@@ -1128,6 +1152,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   print("nRefFrames: ", nRefFrames)
   print("VBSEnable: ", VBSEnable)
   print("FMEEnable: ", FMEEnable)
+  print("FastME: ", FastME)
   print("----------------------------------------------")
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
@@ -1188,7 +1213,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         if (is_p_block):
           # Calculate Motion Vector (inter)
           if(VBSEnable):
-            modes_mv_block += motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable)
+            modes_mv_block += motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable, FastME)
           else:
             modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable, FastME)
 
@@ -1540,22 +1565,22 @@ if __name__ == "__main__":
   in_file = "./videos/black_and_white.yuv"
   out_file = "./temp/assign2_vbs_QP0.far"
 
-  number_frames = 4
+  number_frames = 10
   y_res = 288
   x_res = 352
   i = 16
   r = 2
   QP = 0  # from 0 to (log_2(i) + 7)
-  i_period = 2
+  i_period = 5
   nRefFrames = 1
-  VBSEnable = False
+  VBSEnable = True
   FMEEnable = False
   FastME = False
 
   # bits_in_each_frame = []
 
   decoder_infile = out_file
-  decoder_outfile = "./videos/q4_decoded.yuv"
+  decoder_outfile = "./videos/tests/a2_decoded.yuv"
 
   encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
   decoder(decoder_infile, decoder_outfile)
