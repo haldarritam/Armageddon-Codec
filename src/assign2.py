@@ -613,6 +613,7 @@ def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEna
         predicted_block = np.concatenate((conc_0, conc_1), axis=0)
 
         break        
+    return [split], predicted_block
   else:
     modes_mv = modes_mv[-1]
     top_edge = np.full((1, i), grey)
@@ -627,8 +628,7 @@ def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEna
     if ((modes_mv == 0) and ((bl_x_it - 1) >= 0)):
       left_edge = new_reconstructed[bl_y_it][bl_x_it - 1][:, -1].reshape((i, 1))
       predicted_block[:, :] = left_edge
-
-  return [split], predicted_block
+    return split, predicted_block
   
 def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, is_p_block, VBSEnable, FMEEnable, QTC, sub_Q):
 
@@ -1368,8 +1368,8 @@ if __name__ == "__main__":
   QP = 0  # from 0 to (log_2(i) + 7)
   i_period = 2
   nRefFrames = 1
-  FMEEnable = True
-  VBSEnable = True
+  FMEEnable = False
+  VBSEnable = False
 
   # bits_in_each_frame = []
 
