@@ -36,8 +36,8 @@ def find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, o
                   if((origin != 1 and (check%2)==0) or origin == 1):
                       if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
                           #print(reconstructed.shape)
-                          extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
-                          # extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
+                          # extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
+                          extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
 
                           SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
                           if (SAD < best_SAD):
@@ -1078,6 +1078,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
           else:
             modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable, FastME)
 
+          # print(modes_mv_block)
           split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
 
           # print(frame, bl_y_it, bl_x_it, predicted_block[int(i/2)])
@@ -1433,8 +1434,8 @@ if __name__ == "__main__":
   QP = 0  # from 0 to (log_2(i) + 7)
   i_period = 2
   nRefFrames = 1
-  FMEEnable = True
   VBSEnable = False
+  FMEEnable = False
   FastME = False
 
   # bits_in_each_frame = []
