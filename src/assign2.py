@@ -12,6 +12,56 @@ def idct2D(block): # Inverse Transform Function
   res = idct(idct(block, axis=0, norm='ortho'), axis=1, norm='ortho')
   return res
 
+def find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled, rec_buffer_pos = -1):
+    mv = (0, 0, 0)
+    best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1)
+    up_r = r
+    
+    if (FMEEnabled):
+      up_r = 2 * r
+
+    negative = -up_r
+    positive = (up_r + 1)
+    check = 1
+    
+    if(origin!=1):
+        # print('HERE')
+        negative = -1
+        positive = 2
+
+    for buff_idx, reconstructed in enumerate(rec_buffer):
+        if (rec_buffer_pos != -1 and buff_idx == rec_buffer_pos) or (rec_buffer_pos == -1):
+          for y_dir in range(negative, positive):
+              for x_dir in range(negative, positive):
+                  if((origin != 1 and (check%2)==0) or origin == 1):
+                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+                          #print(reconstructed.shape)
+                          extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
+                          # extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
+
+                          SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
+                          if (SAD < best_SAD):
+                              best_SAD = SAD
+                              mv = (y_dir, x_dir, buff_idx)
+                          elif (SAD == best_SAD):
+                              if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
+                                  best_SAD = SAD
+                                  mv = (y_dir, x_dir, buff_idx)
+                              elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
+                                  if (y_dir < mv[0]):
+                                      best_SAD = SAD
+                                      mv = (y_dir, x_dir, buff_idx)
+                                  elif (y_dir == mv[0]):
+                                      if (x_dir < mv[1]):
+                                          best_SAD = SAD
+                                          mv = (y_dir, x_dir, buff_idx)
+
+                  if(origin!=1):
+                      check = check + 1
+    # print("Mv and best SAD are: ", mv,best_SAD)
+    # print("+++++++")
+    return mv, best_SAD
+    
 def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed):
   extracted = 0
   if(FMEEnabled):
@@ -65,40 +115,63 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
 
   return extracted
 
-def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled):
+def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME):
 
-  best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1)
-  mv = (0, 0, 0)
+    if(FastME):
+      # print('Entered')
+      origin = 1
+      iterate = 1
+      mv_accum = []
+      mv_new = ()
+      mv_test = ()
 
-  up_r = r
-  if (FMEEnabled):
-    up_r = 2 * r
+      mv_new,sad_new = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled)
+      # print('Got mv')
+      # print(type(mv_new))
+      origin = 2
 
-  for buff_idx, reconstructed in enumerate(rec_buffer):
-    for y_dir in range(-up_r, (up_r + 1)):
-      for x_dir in range(-up_r, (up_r + 1)):
+      if mv_new[0] == 0 and mv_new[1] == 0:
+        #print("MV points to origin")
+        return [mv_new]
 
-        extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
+      #print(head_idy, head_idx)
+      head_idy += mv_new[0]
+      head_idx += mv_new[1]
+      #print(mv_new)
 
-        SAD = np.sum(np.abs(np.subtract(extracted, block, dtype=int)))
+      if nRefFrames > 1:
+        ref_frame = mv_new[2]
+      else:
+        ref_frame = -1
 
-        if (SAD < best_SAD):
-          best_SAD = SAD
-          mv = (y_dir, x_dir, buff_idx)
-        elif (SAD == best_SAD):
-          if ((abs(y_dir) + abs(x_dir)) < (abs(mv[0]) + abs(mv[1]))):
-            best_SAD = SAD
-            mv = (y_dir, x_dir, buff_idx)
-          elif ((abs(y_dir) + abs(x_dir)) == (abs(mv[0]) + abs(mv[1]))):
-            if (y_dir < mv[0]):
-              best_SAD = SAD
-              mv = (y_dir, x_dir, buff_idx)
-            elif (y_dir == mv[0]):
-              if (x_dir < mv[1]):
-                best_SAD = SAD
-                mv = (y_dir, x_dir, buff_idx)
+      #print("Ref Frame is ", ref_frame)
 
-  return [mv]
+      while(iterate):
+          #print("Head is ", head_idy, head_idx)
+          mv_test,sad_test = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled, ref_frame)
+          # print('Got sad')
+          #print ("SADs: ", sad_test, sad_new)
+          if(sad_test < sad_new):
+              sad_new = sad_test
+              head_idy += mv_test[0]
+              head_idx += mv_test[1]
+              #print(mv_new)
+              #print(mv_new, mv_test)
+              mv_new = (mv_new[0]+mv_test[0], mv_new[1]+mv_test[1], ref_frame)
+              #print(mv_new)
+              #print(mv_new)
+              #print(mv_new)
+              #print ("Better MV found!")
+          else:
+              iterate = 0
+
+      return [mv_new]
+    else:
+      # print("new else")
+      origin = 1
+      mv_non_fme, sad_non_fme = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled)
+      return [mv_non_fme]
+
 
 def RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO):
 
@@ -929,7 +1002,7 @@ def transform_quantize(residual_matrix, frame, bl_y_it, bl_x_it, Q, sub_Q, split
 ##############################################################################
 ##############################################################################
 
-def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable):
+def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME):
   if (nRefFrames > (i_period - 1)):
     print("nRefFrames is incompatible with i_period.")
     return
@@ -1011,7 +1084,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
           if(VBSEnable):
             modes_mv_block += motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable)
           else:
-            modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable)
+            modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable, FastME)
 
           split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
 
@@ -1360,7 +1433,7 @@ if __name__ == "__main__":
   in_file = "./videos/black_and_white.yuv"
   out_file = "./temp/assign2_vbs_QP0.far"
 
-  number_frames = 10
+  number_frames = 4
   y_res = 288
   x_res = 352
   i = 16
@@ -1368,15 +1441,16 @@ if __name__ == "__main__":
   QP = 0  # from 0 to (log_2(i) + 7)
   i_period = 2
   nRefFrames = 1
-  FMEEnable = True
-  VBSEnable = True
+  FMEEnable = False
+  VBSEnable = False
+  FastME = False
 
   # bits_in_each_frame = []
 
   decoder_infile = out_file
   decoder_outfile = "./videos/q4_decoded.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable)
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
   decoder(decoder_infile, decoder_outfile)
   
   # y_res = 3
