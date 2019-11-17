@@ -515,7 +515,7 @@ def calculate_reconstructed_image(residual_matrix, reconstructed, ext_y_res, ext
   new_reconstructed = decoder_core(residual_matrix, reconstructed, mv)
 
   return new_reconstructed
-def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEnable):
+def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEnable, QTC, sub_Q):
 
   # print("Here")
   grey = 128
@@ -542,15 +542,28 @@ def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEna
           left_edge = new_reconstructed[bl_y_it][bl_x_it - 1][:, -1].reshape((i, 1))
           predicted_block[:, :] = left_edge
 
+          # print(predicted_block)
+
         break
 
       elif (modes_mv[idx] == [1]):
 
         split = 1
-
         i = int(i / 2)
-        predicted_sub = []
+        predicted_sub = np.zeros((4, i, i), dtype=int)
         sub_block = np.empty((i, i), dtype=int)
+
+        sub_QTC = []
+        sub_QTC += [QTC[0: i, 0: i]]
+        sub_QTC += [QTC[0: i, i: i + i]]
+        sub_QTC += [QTC[i: i + i, 0: i]]
+        sub_QTC += [QTC[i: i + i, i: i + i]]
+
+        sub_residuals = []
+        sub_residuals += [idct2D(np.multiply(sub_QTC[0], sub_Q))]
+        sub_residuals += [idct2D(np.multiply(sub_QTC[1], sub_Q))]
+        sub_residuals += [idct2D(np.multiply(sub_QTC[2], sub_Q))]
+        sub_residuals += [idct2D(np.multiply(sub_QTC[3], sub_Q))]
 
         # print(i, sub_block.shape)
 
@@ -573,25 +586,27 @@ def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEna
         top_edge += [top_edge_1, top_edge_2]
         left_edge += [left_edge_1, left_edge_2]
 
-        lin_it = 1
+        lin_it = 0
 
         for y_idx in range(2):
           for x_idx in range(2):
 
-            current_mode = modes_mv[idx + lin_it]
-            lin_it += 1
+            current_mode = modes_mv[idx + lin_it + 1]
 
             if (current_mode == 0):
-              sub_block[:, :] = left_edge[y_idx]             
-              top_edge[x_idx] = sub_block[-1, :]
-              left_edge[y_idx] = sub_block[:, -1]
+              sub_block[:, :] = left_edge[y_idx]
+              recontructed_block = np.add(sub_residuals[lin_it], sub_block)        
+              top_edge[x_idx] = recontructed_block[-1, :]
+              left_edge[y_idx] = recontructed_block[:, -1]
               
             elif (current_mode == 1):
-              sub_block[:, :] = top_edge[x_idx]              
-              top_edge[x_idx] = sub_block[-1, :]
-              left_edge[y_idx] = sub_block[:, -1]
+              sub_block[:, :] = top_edge[x_idx]
+              recontructed_block = np.add(sub_residuals[lin_it], sub_block)              
+              top_edge[x_idx] = recontructed_block[-1, :]
+              left_edge[y_idx] = recontructed_block[:, -1]
 
-            predicted_sub += [sub_block]
+            predicted_sub[lin_it] = sub_block
+            lin_it += 1
         
         conc_0 = np.concatenate((predicted_sub[0], predicted_sub[1]), axis=1)
         conc_1 = np.concatenate((predicted_sub[2], predicted_sub[3]), axis=1)
@@ -613,9 +628,9 @@ def extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEna
       left_edge = new_reconstructed[bl_y_it][bl_x_it - 1][:, -1].reshape((i, 1))
       predicted_block[:, :] = left_edge
 
-  return split, predicted_block
+  return [split], predicted_block
   
-def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, is_p_block, VBSEnable, FMEEnable):
+def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, is_p_block, VBSEnable, FMEEnable, QTC, sub_Q):
 
   grey = 128
   predicted_block = np.empty((i, i), dtype=int)
@@ -626,7 +641,7 @@ def predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, 
   if(is_p_block):    
     split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv, i, VBSEnable, FMEEnable)
   else:
-    split, predicted_block = extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEnable)
+    split, predicted_block = extract_intra_block(new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, VBSEnable, QTC, sub_Q)
 
   return split, predicted_block
 
@@ -1305,24 +1320,9 @@ def decoder(in_file, out_file):
             lin_idx += 3
           
         #  Decode
-        # print(modes_mv)
-        # print(modes_mv[-1])
-
-        split, predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable)
-        
-        # print(frame, bl_y_it, bl_x_it, split, predicted_block.shape)
-
-        # print(predicted_block.shape)
-        # new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, predicted_block)
+        split, predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable, QTC_recovered, sub_Q)
 
         new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, sub_Q, predicted_block, split)
-        
-        # print(frame, bl_y_it, bl_x_it, new_reconstructed[bl_y_it][bl_x_it][int(i/2)])
-
-    # if (frame == 1):
-    #   in_block = (n_y_blocks*n_x_blocks)
-    #   print(modes_mv[in_block:in_block+30])
-    #   quit()
     
     #  Concatenate
     counter = 0
@@ -1360,7 +1360,7 @@ if __name__ == "__main__":
   in_file = "./videos/black_and_white.yuv"
   out_file = "./temp/assign2_vbs_QP0.far"
 
-  number_frames = 4
+  number_frames = 10
   y_res = 288
   x_res = 352
   i = 16
@@ -1368,7 +1368,7 @@ if __name__ == "__main__":
   QP = 0  # from 0 to (log_2(i) + 7)
   i_period = 2
   nRefFrames = 1
-  FMEEnable = False
+  FMEEnable = True
   VBSEnable = True
 
   # bits_in_each_frame = []
@@ -1376,7 +1376,7 @@ if __name__ == "__main__":
   decoder_infile = out_file
   decoder_outfile = "./videos/q4_decoded.yuv"
 
-  # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable)
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable)
   decoder(decoder_infile, decoder_outfile)
   
   # y_res = 3
