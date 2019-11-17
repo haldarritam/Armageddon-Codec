@@ -61,6 +61,40 @@ def find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, o
     # print("Mv and best SAD are: ", mv,best_SAD)
     # print("+++++++")
     return mv, best_SAD
+
+def find_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled, best_RDO_block, lambda_const, Q, rec_buffer_pos = -1):
+    mv = (0, 0, 0)
+    best_SAD = i * i * 255 + 1  # The sum can never exceed (i * i * 255 + 1)
+    up_r = r
+    
+    if (FMEEnabled):
+      up_r = 2 * r
+
+    negative = -up_r
+    positive = (up_r + 1)
+    check = 1
+    
+    if(origin!=1):
+        # print('HERE')
+        negative = -1
+        positive = 2
+
+    for buff_idx, reconstructed in enumerate(rec_buffer):
+        if (rec_buffer_pos != -1 and buff_idx == rec_buffer_pos) or (rec_buffer_pos == -1):
+          for y_dir in range(negative, positive):
+              for x_dir in range(negative, positive):
+                  if((origin != 1 and (check%2)==0) or origin == 1):
+                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+
+                          extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
+
+                          best_RDO_block, mv = RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO_block)
+
+                  if(origin!=1):
+                      check = check + 1
+    # print("Mv and best SAD are: ", mv,best_SAD)
+    # print("+++++++")
+    return mv, best_RDO_block
     
 def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed):
   extracted = 0
@@ -275,6 +309,86 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
     return [0, mv]
   else:
     return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]]
+    
+# def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled):
+
+#   if (i != 4 and i != 8 and i != 16):
+#     print("Block size should be 4, 8 or 16 when VBS enabled!")
+#     print("Exiting...")
+#     exit()
+
+#   sub_i = (int)(i / 2)
+
+#   up_r = r
+#   if (FMEEnabled):
+#     up_r = 2 * r
+
+#   # Extract the sub-blocks
+#   sub_block = []
+
+#   sub_block += [block[0: sub_i, 0: sub_i]]
+#   sub_block += [block[0: sub_i, sub_i: sub_i + sub_i]]
+#   sub_block += [block[sub_i: sub_i + sub_i, 0: sub_i]]
+#   sub_block += [block[sub_i: sub_i + sub_i, sub_i: sub_i + sub_i]]
+
+#   sub_head_idy = [head_idy, head_idy, head_idy + sub_i, head_idy + sub_i]
+#   sub_head_idx = [head_idx, head_idx + sub_i, head_idx, head_idx + sub_i]
+
+
+#   # Setting up the initial best block value using mv=(0, 0, 0)
+#   extracted_block = FME_extraction(FMEEnabled, i, head_idy, head_idx, 0, 0, ext_y_res, ext_x_res, rec_buffer[0])
+
+#   best_RDO_block = calc_RDO(extracted_block, block, Q, lambda_const) + 1
+
+#   # Setting up the initial best sub-block value using mv=(0, 0, 0)
+#   extracted_sub = []
+  
+#   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[0], sub_head_idx[0], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+  
+#   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[1], sub_head_idx[1], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+    
+#   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[2], sub_head_idx[2], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+    
+#   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[3], sub_head_idx[3], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+  
+#   best_RDO_sub = []
+
+#   best_RDO_sub += [calc_RDO(extracted_sub[0], sub_block[0], sub_Q, lambda_const)+1]
+#   best_RDO_sub += [calc_RDO(extracted_sub[1], sub_block[1], sub_Q, lambda_const)+1]
+#   best_RDO_sub += [calc_RDO(extracted_sub[2], sub_block[2], sub_Q, lambda_const)+1]
+#   best_RDO_sub += [calc_RDO(extracted_sub[3], sub_block[3], sub_Q, lambda_const)+1]
+
+#   mv = (0, 0, 0)
+#   sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
+
+#   for buff_idx, reconstructed in enumerate(rec_buffer):
+#     # Block prediction
+#     for y_dir in range(-up_r, (up_r + 1)):
+#       for x_dir in range(-up_r, (up_r + 1)):
+
+#         if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+
+#           extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
+
+#           best_RDO_block, mv = RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO_block)
+
+#     # Sub-block prediction
+#     for sub_idx in range(4):
+#       for y_dir in range(-up_r, (up_r + 1)):
+#         for x_dir in range(-up_r, (up_r + 1)):
+
+#           if ((sub_head_idy[sub_idx] + y_dir) >= 0 and (sub_head_idy[sub_idx] + y_dir + sub_i) < ext_y_res and (sub_head_idx[sub_idx] + x_dir) >= 0 and (sub_head_idx[sub_idx] + x_dir + sub_i) < ext_x_res):
+
+#             extracted_sub = FME_extraction(FMEEnabled, sub_i, sub_head_idy[sub_idx], sub_head_idx[sub_idx], y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
+
+#             best_RDO_sub[sub_idx], sub_mv[sub_idx] = RDO_sel(extracted_sub, sub_block[sub_idx], sub_Q, lambda_const, y_dir, x_dir, buff_idx, sub_mv[sub_idx], best_RDO_sub[sub_idx])
+
+#   RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
+
+#   if (best_RDO_block < RDO_sub):
+#     return [0, mv]
+#   else:
+#     return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]]
 
 def intra_prediction(frame, y_idx, x_idx):
 
