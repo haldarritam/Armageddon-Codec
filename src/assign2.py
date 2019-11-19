@@ -171,7 +171,7 @@ def RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_
 
   return best_RDO, mv
 
-def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME):
+def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, nRefFrames):
 
     if(FastME):
       # print('Entered')
@@ -228,7 +228,7 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
       mv_non_fme, sad_non_fme = find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, origin, FMEEnabled)
       return [mv_non_fme]
 
-def fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block):
+def fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames):
 
     if(FastME):
       origin = 1
@@ -270,7 +270,7 @@ def fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
       return mv_non_fastme, sad_non_fastme
 
 
-def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled, FastME):
+def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled, FastME, nRefFrames):
 
   if (i != 4 and i != 8 and i != 16):
     print("Block size should be 4, 8 or 16 when VBS enabled!")
@@ -321,11 +321,11 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
   mv = (0, 0, 0)
   sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
 
-  mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block)
+  mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
 
     # Sub-block prediction
   for sub_idx in range(4):
-    sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx], sub_head_idx[sub_idx], ext_y_res, ext_x_res, sub_i, FMEEnabled, FastME, lambda_const, sub_Q, best_RDO_sub[sub_idx])
+    sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx], sub_head_idx[sub_idx], ext_y_res, ext_x_res, sub_i, FMEEnabled, FastME, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
 
   RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
 
@@ -679,7 +679,7 @@ def rescale_IDCT(QTC, Q):
 
 
 
-def decoder_core(QTC, Q, sub_Q, predicted_block, split):
+def decoder_core(QTC, Q, sub_Q, predicted_block, split, i):
   approx_residual = []
   recontructed_block = 0
   if (split == 0):
@@ -1136,24 +1136,24 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   if (nRefFrames > (i_period - 1)):
     print("nRefFrames is incompatible with i_period.")
     return
-  print("----------------------------------------------")
-  print("----------------------------------------------")
-  print("Q4 Encoder Parameters-")
-  print("----------------------------------------------")
-  print("in_file: ", in_file)
-  print("out_file: ", out_file)
-  print("number_frames: ", number_frames)
-  print("y_res: ", y_res)
-  print("x_res: ", x_res)
-  print("i: ", i)
-  print("r: ", r)
-  print("QP: ", QP)
-  print("i_period: ", i_period)
-  print("nRefFrames: ", nRefFrames)
-  print("VBSEnable: ", VBSEnable)
-  print("FMEEnable: ", FMEEnable)
-  print("FastME: ", FastME)
-  print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("Q4 Encoder Parameters-")
+  # print("----------------------------------------------")
+  # print("in_file: ", in_file)
+  # print("out_file: ", out_file)
+  # print("number_frames: ", number_frames)
+  # print("y_res: ", y_res)
+  # print("x_res: ", x_res)
+  # print("i: ", i)
+  # print("r: ", r)
+  # print("QP: ", QP)
+  # print("i_period: ", i_period)
+  # print("nRefFrames: ", nRefFrames)
+  # print("VBSEnable: ", VBSEnable)
+  # print("FMEEnable: ", FMEEnable)
+  # print("FastME: ", FastME)
+  # print("----------------------------------------------")
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
   # reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
@@ -1176,7 +1176,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
   sub_Q = calculate_Q((int)(i/2), sub_QP)
 
-  Constant = 1
+  Constant = 30
   lambda_const = Constant * 2 ** ((QP - 12) / 3)
   split = 0
 
@@ -1213,9 +1213,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         if (is_p_block):
           # Calculate Motion Vector (inter)
           if(VBSEnable):
-            modes_mv_block += motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable, FastME)
+            modes_mv_block += motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable, FastME, nRefFrames)
           else:
-            modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable, FastME)
+            modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable, FastME, nRefFrames)
 
           # print(modes_mv_block)
           split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
@@ -1239,7 +1239,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         QTC[frame][bl_y_it][bl_x_it] = transform_quantize(residual_matrix, frame, bl_y_it, bl_x_it, Q, sub_Q, split, i)
 
       #  Decode
-        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, sub_Q, predicted_block, split)      
+        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, sub_Q, predicted_block, split, i)      
 
       # Differential Encoding
         if (is_p_block):
@@ -1382,20 +1382,20 @@ def decoder(in_file, out_file):
   VBSEnable, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   
 
-  print("----------------------------------------------")
-  print("----------------------------------------------")
-  print("Q4 Decoder Parameters-")
-  print("----------------------------------------------")
-  print("in_file: ", in_file)
-  print("out_file: ", out_file)
-  print("y_res: ", y_res)
-  print("x_res: ", x_res)
-  print("i: ", i)
-  print("QP: ", QP)
-  print("nRefFrames: ", nRefFrames)
-  print("FMEEnable: ", FMEEnable)
-  print("VBSEnable: ", VBSEnable)
-  print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("Q4 Decoder Parameters-")
+  # print("----------------------------------------------")
+  # print("in_file: ", in_file)
+  # print("out_file: ", out_file)
+  # print("y_res: ", y_res)
+  # print("x_res: ", x_res)
+  # print("i: ", i)
+  # print("QP: ", QP)
+  # print("nRefFrames: ", nRefFrames)
+  # print("FMEEnable: ", FMEEnable)
+  # print("VBSEnable: ", VBSEnable)
+  # print("----------------------------------------------")
 
   bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   mdiff_encoded_bitstream = encoded_bitstream[encoded_idx: encoded_idx + bits_in_mdiff]
@@ -1527,7 +1527,7 @@ def decoder(in_file, out_file):
         #  Decode
         split, predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable, QTC_recovered, sub_Q)
 
-        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, sub_Q, predicted_block, split)
+        new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, sub_Q, predicted_block, split, i)
     
     #  Concatenate
     counter = 0
@@ -1562,29 +1562,35 @@ def decoder(in_file, out_file):
 
 if __name__ == "__main__":
 
-  in_file = "./videos/black_and_white.yuv"
-  out_file = "./temp/assign2_vbs_QP0.far"
+  # in_file = "./videos/black_and_white.yuv"
+  # out_file = "./temp/assign2_vbs_QP4_.far"
 
-  number_frames = 10
+  in_file = "./videos/synthetic_bw.yuv"
+  out_file = "./temp/synthetic_test.far"
+
+  number_frames = 30
   y_res = 288
   x_res = 352
   i = 16
-  r = 2
-  QP = 0  # from 0 to (log_2(i) + 7)
-  i_period = 5
-  nRefFrames = 1
-  VBSEnable = True
+  r = 4
+  QP = 4  # from 0 to (log_2(i) + 7)
+  i_period = 8
+  nRefFrames = 4
+  VBSEnable = False
   FMEEnable = False
   FastME = False
 
   # bits_in_each_frame = []
 
   decoder_infile = out_file
-  decoder_outfile = "./videos/tests/a2_decoded.yuv"
+  decoder_outfile = "./videos/a2_decoded.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
-  decoder(decoder_infile, decoder_outfile)
+  # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+  # decoder(decoder_infile, decoder_outfile)
   
+# ##############################################################################
+# ##############################################################################
+
   # y_res = 3
   # x_res = 3
   # reconstructed = np.zeros((y_res, x_res), dtype=int)
@@ -1627,4 +1633,46 @@ if __name__ == "__main__":
 #   plt.show()
 
 # ##############################################################################
+# ##############################################################################
+
+
+# ##############################################################################
+  nRefFrames = 1
+  out_file = "./temp/synthetic_nref_1.far"
+  decoder_infile = out_file
+  decoder_outfile = "./videos/a2_plot/synthetic_nref_1.yuv"
+
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+  decoder(decoder_infile, decoder_outfile)
+
+# ##############################################################################
+
+  nRefFrames = 2
+  out_file = "./videos/a2_plot/synthetic_nref_2.far"
+  decoder_infile = out_file
+  decoder_outfile = "./videos/a2_plot/synthetic_nref_2.yuv"
+
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+  decoder(decoder_infile, decoder_outfile)
+
+# ##############################################################################
+
+  nRefFrames = 3
+  out_file = "./videos/a2_plot/synthetic_nref_3.far"
+  decoder_infile = out_file
+  decoder_outfile = "./videos/a2_plot/synthetic_nref_3.yuv"
+
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+  decoder(decoder_infile, decoder_outfile)
+
+# ##############################################################################
+
+  nRefFrames = 4
+  out_file = "./videos/a2_plot/synthetic_nref_4.far"
+  decoder_infile = out_file
+  decoder_outfile = "./videos/a2_plot/synthetic_nref_4.yuv"
+
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+  decoder(decoder_infile, decoder_outfile)
+
 # ##############################################################################

@@ -58,59 +58,190 @@ if __name__ == "__main__":
   psnr = []
   file_size = []
 
+  # ---------------------------------------------------------------------------
   psnr_temp = []
   file_size_temp = []
 
-  in_file_2 = "./temp/assign2_base_QP0.yuv"
+  in_file_2 = "./videos/tests/QP1-1000_encoded.yuv"
   psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
-  psnr += [psnr_temp]
-  encoded_in_file_2 = "./temp/assign2_base_QP0.far"
+  encoded_in_file_2 = "./videos/tests/QP1-1000_encoded.far"
   file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP4-1000_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP4-1000_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP7-1000_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP7-1000_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP10-1000_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP10-1000_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  psnr += [psnr_temp]
   file_size += [file_size_temp]
 
+  # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
   psnr_temp = []
   file_size_temp = []
 
-  in_file_2 = "./temp/assign2_vbs_QP0.yuv"
+  in_file_2 = "./videos/tests/QP1-1100_encoded.yuv"
   psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
-  psnr += [psnr_temp]
-  encoded_in_file_2 = "./temp/assign2_vbs_QP0.far"
+  encoded_in_file_2 = "./videos/tests/QP1-1100_encoded.far"
   file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP4-1100_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP4-1100_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP7-1100_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP7-1100_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP10-1100_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP10-1100_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  psnr += [psnr_temp]
   file_size += [file_size_temp]
-  
+
+  # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
   psnr_temp = []
   file_size_temp = []
 
-  in_file_2 = "./temp/assign2_base.yuv"
+  in_file_2 = "./videos/tests/QP1-1010_encoded.yuv"
   psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
-  psnr += [psnr_temp]
-  encoded_in_file_2 = "./temp/assign2_base.far"
+  encoded_in_file_2 = "./videos/tests/QP1-1010_encoded.far"
   file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP4-1010_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP4-1010_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP7-1010_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP7-1010_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP10-1010_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP10-1010_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  psnr += [psnr_temp]
   file_size += [file_size_temp]
 
+  # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
   psnr_temp = []
   file_size_temp = []
 
-  in_file_2 = "./temp/assign2_vbs.yuv"
+  in_file_2 = "./videos/tests/QP1-1001_encoded.yuv"
   psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
-  psnr += [psnr_temp]
-  encoded_in_file_2 = "./temp/assign2_vbs.far"
+  encoded_in_file_2 = "./videos/tests/QP1-1001_encoded.far"
   file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP4-1001_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP4-1001_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP7-1001_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP7-1001_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP10-1001_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP10-1001_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  psnr += [psnr_temp]
   file_size += [file_size_temp]
 
+  # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  psnr_temp = []
+  file_size_temp = []
+
+  in_file_2 = "./videos/tests/QP1-2000_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP1-2000_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP4-2000_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP4-2000_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP7-2000_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP7-2000_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP10-2000_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP10-2000_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  psnr += [psnr_temp]
+  file_size += [file_size_temp]
+
+  # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  psnr_temp = []
+  file_size_temp = []
+
+  in_file_2 = "./videos/tests/QP1-2111_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP1-2111_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP4-2111_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP4-2111_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP7-2111_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP7-2111_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  in_file_2 = "./videos/tests/QP10-2111_encoded.yuv"
+  psnr_temp += [PSNR(y_frame_1, in_file_2, y_res, x_res, number_frames)]
+  encoded_in_file_2 = "./videos/tests/QP10-2111_encoded.far"
+  file_size_temp += [os.path.getsize(encoded_in_file_2) * 8]
+
+  psnr += [psnr_temp]
+  file_size += [file_size_temp]
+
+  # ---------------------------------------------------------------------------
 
   fig, ax = plt.subplots()
 
-  ax.plot(file_size[0], psnr[0], 'x', label='Base QP0')
-  ax.plot(file_size[1], psnr[1], 'x', label='VBS QP0')
-  ax.plot(file_size[2], psnr[2], 'x', label='Base QP3')
-  ax.plot(file_size[3], psnr[3], 'x', label='VBS QP3')
+  ax.plot(file_size[0], psnr[0], 'x:', label='nRef=1, vbs=0, fme=0, FastME=0')
+  ax.plot(file_size[1], psnr[1], 'x-.', label='nRef=1, vbs=1, fme=0, FastME=0')
+  ax.plot(file_size[2], psnr[2], 'x--', label='nRef=1, vbs=0, fme=1, FastME=0')
+  ax.plot(file_size[3], psnr[3], 'x:', label='nRef=1, vbs=0, fme=0, FastME=1')
+  ax.plot(file_size[4], psnr[4], 'x-.', label='nRef=2, vbs=0, fme=0, FastME=0')
+  ax.plot(file_size[5], psnr[5], 'x--', label='nRef=2, vbs=1, fme=1, FastME=1')
   
   
   
   ax.set(xlabel='Size in bits', ylabel='PSNR (dB)')
   ax.grid()
-  ax.legend()
+  ax.legend(loc='lower right')
+  # ax.set_yscale('log')
 
   # fig.savefig("test.png")
   plt.show()

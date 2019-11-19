@@ -144,20 +144,99 @@
 # ######################################################################
 
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i2_r2.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 2 -r 2
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i2_r2.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 2 -r 2
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i8_r2.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 8 -r 2
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i8_r2.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 8 -r 2
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i64_r2.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 64 -r 2
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i64_r2.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 64 -r 2
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i2_r4.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 2 -r 4
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i2_r4.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 2 -r 4
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i8_r4.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 8 -r 4
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i8_r4.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 8 -r 4
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i64_r4.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 64 -r 4
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i64_r4.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 64 -r 4
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i2_r8.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 2 -r 8
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i2_r8.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 2 -r 8
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i8_r8.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 8 -r 8
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i8_r8.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 8 -r 8
 
-python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i64_r8.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 64 -r 8
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/report/q3_table/i64_r8.yuv -y_res 288 -x_res 352 -frames 10 -o both -q 3 -n 3 -i 64 -r 8
+
+# ######################################################################
+# Generating for various QP values (A2)
+# ######################################################################
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP1-1000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 1 -nRef 1 -vbs 0 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-1000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 1 -vbs 0 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-1000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 1 -vbs 0 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP7-1000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 7 -nRef 1 -vbs 0 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP10-1000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 10 -nRef 1 -vbs 0 -fme 0 -fastME 0
+
+
+
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP1-2000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 1 -nRef 2 -vbs 0 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-2000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 2 -vbs 0 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-2000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 2 -vbs 0 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP7-2000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 7 -nRef 2 -vbs 0 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP10-2000.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 10 -nRef 2 -vbs 0 -fme 0 -fastME 0
+
+
+
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP1-1100.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 1 -nRef 1 -vbs 1 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-1100.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 1 -vbs 1 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-1100.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 1 -vbs 1 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP7-1100.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 7 -nRef 1 -vbs 1 -fme 0 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP10-1100.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 10 -nRef 1 -vbs 1 -fme 0 -fastME 0
+
+
+
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP1-1010.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 1 -nRef 1 -vbs 0 -fme 1 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-1010.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 1 -vbs 0 -fme 1 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-1010.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 1 -vbs 0 -fme 1 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP7-1010.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 7 -nRef 1 -vbs 0 -fme 1 -fastME 0
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP10-1010.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 10 -nRef 1 -vbs 0 -fme 1 -fastME 0
+
+
+
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP1-1001.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 1 -nRef 1 -vbs 0 -fme 0 -fastME 1
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-1001.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 1 -vbs 0 -fme 0 -fastME 1
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-1001.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 1 -vbs 0 -fme 0 -fastME 1
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP7-1001.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 7 -nRef 1 -vbs 0 -fme 0 -fastME 1
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP10-1001.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 10 -nRef 1 -vbs 0 -fme 0 -fastME 1
+
+
+
+
+python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP1-2111.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 1 -nRef 2 -vbs 1 -fme 1 -fastME 1
+
+python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-2111.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 2 -vbs 1 -fme 1 -fastME 1
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP4-2111.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 4 -nRef 2 -vbs 1 -fme 1 -fastME 1
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP7-2111.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 7 -nRef 2 -vbs 1 -fme 1 -fastME 1
+
+# python main.py -in ./videos/black_and_white.yuv -out ./videos/tests/QP10-2111.yuv -y_res 288 -x_res 352 -frames 10 -o both  -i 16 -r 4 -ip 8 -QP 10 -nRef 2 -vbs 1 -fme 1 -fastME 1

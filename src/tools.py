@@ -309,7 +309,51 @@ def I_golomb(bitstream, idx):
   else:
     return (int)(-number/2), idx
 
+def nRef_tool(n_past_frames, view_new_reconstructed):
+  if(n_past_frames == 1):
+    view_new_reconstructed[1,-2] = replace_value_for(view_new_reconstructed[1,-2])
+  elif(n_past_frames == 2):
+    view_new_reconstructed[1,1] = replace_value_for(view_new_reconstructed[1,1])
+  elif(n_past_frames == 3):
+    view_new_reconstructed[-2,1] = replace_value_for(view_new_reconstructed[-2,1])
+  elif(n_past_frames == 4):
+    view_new_reconstructed[-2,-2] = replace_value_for(view_new_reconstructed[-2,-2])
+  elif(n_past_frames == 5):
+    view_new_reconstructed[1,-2] = replace_value_for(view_new_reconstructed[1,-2])
+    view_new_reconstructed[1,1] = replace_value_for(view_new_reconstructed[1,1])
+  elif(n_past_frames == 6):
+    view_new_reconstructed[1,1] = replace_value_for(view_new_reconstructed[1,1])
+    view_new_reconstructed[-2,1] = replace_value_for(view_new_reconstructed[-2,1])
+  elif(n_past_frames == 7):
+    view_new_reconstructed[-2,1] = replace_value_for(view_new_reconstructed[-2,1])
+    view_new_reconstructed[-2,-2] = replace_value_for(view_new_reconstructed[-2,-2])
+  elif(n_past_frames == 8):
+    view_new_reconstructed[-2,-2] = replace_value_for(view_new_reconstructed[-2,-2])
+    view_new_reconstructed[1,-2] = replace_value_for(view_new_reconstructed[1,-2])
+  elif(n_past_frames == 9):
+    view_new_reconstructed[1,-2] = replace_value_for(view_new_reconstructed[1,-2])
+    view_new_reconstructed[1,1] = replace_value_for(view_new_reconstructed[1,1])
+    view_new_reconstructed[-2,1] = replace_value_for(view_new_reconstructed[-2,1])  
+  elif(n_past_frames == 10):
+    view_new_reconstructed[1,1] = replace_value_for(view_new_reconstructed[1,1])
+    view_new_reconstructed[-2,1] = replace_value_for(view_new_reconstructed[-2,1])
+    view_new_reconstructed[-2,-2] = replace_value_for(view_new_reconstructed[-2,-2])      
+  elif(n_past_frames == 11):
+    view_new_reconstructed[-2,1] = replace_value_for(view_new_reconstructed[-2,1])
+    view_new_reconstructed[-2,-2] = replace_value_for(view_new_reconstructed[-2,-2])
+    view_new_reconstructed[1,-2] = replace_value_for(view_new_reconstructed[1,-2])    
+  elif(n_past_frames == 12):
+    view_new_reconstructed[-2,-2] = replace_value_for(view_new_reconstructed[-2,-2])
+    view_new_reconstructed[1,-2] = replace_value_for(view_new_reconstructed[1,-2])
+    view_new_reconstructed[1,1] = replace_value_for(view_new_reconstructed[1,1])       
+  elif(n_past_frames >= 13):
+    view_new_reconstructed[1,1] = replace_value_for(view_new_reconstructed[1,1])
+    view_new_reconstructed[1,-2] = replace_value_for(view_new_reconstructed[1,-2])
+    view_new_reconstructed[-2,1] = replace_value_for(view_new_reconstructed[-2,1])
+    view_new_reconstructed[-2, -2] = replace_value_for(view_new_reconstructed[-2, -2])
 
+  return view_new_reconstructed
+                
 def decoder(in_file, out_file, view_blocks, view_ref_frame, view_mv):
 
   qtc = []
@@ -494,65 +538,60 @@ def decoder(in_file, out_file, view_blocks, view_ref_frame, view_mv):
             lin_idx += 3
           
         #  Decode
+
+        # print(modes_mv)
+
         split, predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable, QTC_recovered, sub_Q)
 
         new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, sub_Q, predicted_block, split, i)
 
         view_new_reconstructed[bl_y_it][bl_x_it] = new_reconstructed[bl_y_it][bl_x_it]
         if (view_blocks or view_ref_frame):
-            view_new_reconstructed[bl_y_it][bl_x_it][0,:] = 0
-            view_new_reconstructed[bl_y_it][bl_x_it][-1,:] = 0
-            view_new_reconstructed[bl_y_it][bl_x_it][:,0] = 0
-            view_new_reconstructed[bl_y_it][bl_x_it][:,-1] = 0
+          view_new_reconstructed[bl_y_it][bl_x_it][0,:] = 0
+          view_new_reconstructed[bl_y_it][bl_x_it][-1,:] = 0
+          view_new_reconstructed[bl_y_it][bl_x_it][:,0] = 0
+          view_new_reconstructed[bl_y_it][bl_x_it][:,-1] = 0
 
-            if(split and not view_ref_frame):
-                s = int(i/2)
-                view_new_reconstructed[bl_y_it][bl_x_it][s,:] = 0
-                view_new_reconstructed[bl_y_it][bl_x_it][:,s] = 0
+          if(split):
+            s = int(i/2)
+            view_new_reconstructed[bl_y_it][bl_x_it][s,:] = 0
+            view_new_reconstructed[bl_y_it][bl_x_it][:, s] = 0
 
-        if (view_ref_frame and not is_i_frame):
-            n_past_frames = modes_mv[3]
-            if(n_past_frames == 1):
-                view_new_reconstructed[bl_y_it][bl_x_it][0,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,-1])
-            elif(n_past_frames == 2):
-                view_new_reconstructed[bl_y_it][bl_x_it][0,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,0])
-            elif(n_past_frames == 3):
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,0])
-            elif(n_past_frames == 4):
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,-1])
-            elif(n_past_frames == 5):
-                view_new_reconstructed[bl_y_it][bl_x_it][0,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,-1])
-                view_new_reconstructed[bl_y_it][bl_x_it][0,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,0])
-            elif(n_past_frames == 6):
-                view_new_reconstructed[bl_y_it][bl_x_it][0,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,0])
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,0])     
-            elif(n_past_frames == 7):
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,0])
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,-1])
-            elif(n_past_frames == 8):
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,-1])
-                view_new_reconstructed[bl_y_it][bl_x_it][0,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,-1])   
-            elif(n_past_frames == 9):
-                view_new_reconstructed[bl_y_it][bl_x_it][0,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,-1])
-                view_new_reconstructed[bl_y_it][bl_x_it][0,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,0])
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,0])     
-            elif(n_past_frames == 10):
-                view_new_reconstructed[bl_y_it][bl_x_it][0,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,0])
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,0])
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,-1])          
-            elif(n_past_frames == 11):
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,0])
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,-1])
-                view_new_reconstructed[bl_y_it][bl_x_it][0,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,-1])      
-            elif(n_past_frames == 12):
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,-1])
-                view_new_reconstructed[bl_y_it][bl_x_it][0,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,-1])
-                view_new_reconstructed[bl_y_it][bl_x_it][0,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,0])         
-            elif(n_past_frames >= 13):
-                view_new_reconstructed[bl_y_it][bl_x_it][0,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,0])
-                view_new_reconstructed[bl_y_it][bl_x_it][0,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][0,-1])
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,0] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,0])
-                view_new_reconstructed[bl_y_it][bl_x_it][-1,-1] = replace_value_for(view_new_reconstructed[bl_y_it][bl_x_it][-1,-1])
+            if (view_ref_frame and not is_i_frame):
+              block = view_new_reconstructed[bl_y_it][bl_x_it]
+
+              sub_block = []
+              sub_block += [block[0: s, 0: s]]
+              sub_block += [block[0: s, s: s + s]]
+              sub_block += [block[s: s + s, 0: s]]
+              sub_block += [block[s: s + s, s: s + s]]
+
+              for idx, mv in reversed(list(enumerate(modes_mv))):
+
+                if (mv == 1):
+                  n_past_frames = modes_mv[idx+1][2] + 1
+                  sub_block[0] = nRef_tool(n_past_frames, sub_block[0])
+
+                  n_past_frames = modes_mv[idx+2][2] + 1
+                  sub_block[1] = nRef_tool(n_past_frames, sub_block[1])
+
+                  n_past_frames = modes_mv[idx+3][2] + 1
+                  sub_block[2] = nRef_tool(n_past_frames, sub_block[2])
+
+                  n_past_frames = modes_mv[idx+4][2] + 1
+                  sub_block[3] = nRef_tool(n_past_frames, sub_block[3])
+
+                  conc_0 = np.concatenate((sub_block[0], sub_block[1]), axis=1)
+                  conc_1 = np.concatenate((sub_block[2], sub_block[3]), axis=1)
+                  view_new_reconstructed[bl_y_it][bl_x_it] = np.concatenate((conc_0, conc_1), axis=0)
+
+                  break
+
+          else:
+            if (view_ref_frame and not is_i_frame):
+              n_past_frames = modes_mv[-1][2] + 1
+              view_new_reconstructed[bl_y_it][bl_x_it] = nRef_tool(n_past_frames, view_new_reconstructed[bl_y_it][bl_x_it])
+            
     
     #  Concatenate
     counter = 0
@@ -593,7 +632,7 @@ def decoder(in_file, out_file, view_blocks, view_ref_frame, view_mv):
 
 def replace_value_for(current_value):
     if(current_value > 128):
-        return 255
+        return 0
     else:
         return 255
 
@@ -602,17 +641,18 @@ def replace_value_for(current_value):
 
 if __name__ == "__main__":
 
-  out_file = "../temp/bus_assign2_vbs_QP0.far"
+  out_file = "./videos/tests/QP7-2111_encoded.far"
+  # out_file = "./temp/assign2_vbs_QP4_.far"
 
-  view_blocks = False
+  view_blocks = True
   view_ref_frame = True
   view_mv = False
 
-  if ((view_blocks and view_ref_frame) or (view_blocks and view_mv) or (view_ref_frame and view_mv)):
-      print("ERROR: only one visualization can be enabled at a time. Aborting...")
-      quit()
+  # if ((view_blocks and view_ref_frame) or (view_blocks and view_mv) or (view_ref_frame and view_mv)):
+  #     print("ERROR: only one visualization can be enabled at a time. Aborting...")
+  #     quit()
 
   decoder_infile = out_file
-  decoder_outfile = "../videos/tests/a2_decoded.yuv"
+  decoder_outfile = "./videos/a2_decoded.yuv"
 
   decoder(decoder_infile, decoder_outfile, view_blocks, view_ref_frame, view_mv)
