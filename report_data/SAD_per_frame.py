@@ -161,19 +161,31 @@ if __name__ == "__main__":
   frames = range(1, number_frames+1)
   fig, ax = plt.subplots()
 
-  ax.plot(frames, SAD_1, label='nRef_Frame = 1')
-  ax.plot(frames, SAD_2, label='nRef_Frame = 2')
-  ax.plot(frames, SAD_3, label='nRef_Frame = 3')
-  ax.plot(frames, SAD_4, label='nRef_Frame = 4')
-  
-  
+  ax.plot(frames, SAD_1, 'o:', label='nRef_Frame = 1')
+  ax.plot(frames, SAD_2, 'v-.', label='nRef_Frame = 2')
+  ax.plot(frames, SAD_3, 'D--', label='nRef_Frame = 3')
+  ax.plot(frames, SAD_4, 's:', label='nRef_Frame = 4')
+
   plt.xticks(frames)
   ax.set(xlabel='Frame', ylabel=r'SAD $(\times 10^6)$')
   ax.grid()
   ax.legend()
-
-  # fig.savefig("test.png")
   plt.show()
+
+  # x_axis = range(1, 4+1)
+  # fig, ax = plt.subplots()
+
+  # sizes = [754747, 664479, 616103, 551989]
+
+  # ax.plot(x_axis, sizes, 'o-')
+
+  # plt.xticks(x_axis)
+  # ax.set(xlabel='nRefFrame', ylabel='Size (Bytes)')
+  # ax.grid()
+  # ax.legend()
+  # plt.show()
+  
+  
 
 
   # ############################################################################

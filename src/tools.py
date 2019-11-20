@@ -552,7 +552,7 @@ def decoder(in_file, out_file, view_blocks, view_ref_frame, view_mv):
           view_new_reconstructed[bl_y_it][bl_x_it][:,0] = 0
           view_new_reconstructed[bl_y_it][bl_x_it][:,-1] = 0
 
-          if(split):
+          if((split == 1) or (split == [1])):
             s = int(i/2)
             view_new_reconstructed[bl_y_it][bl_x_it][s,:] = 0
             view_new_reconstructed[bl_y_it][bl_x_it][:, s] = 0
@@ -622,10 +622,11 @@ def decoder(in_file, out_file, view_blocks, view_ref_frame, view_mv):
     if (is_i_frame):
       rec_buffer = np.delete(rec_buffer, np.s_[0:nRefFrames], 0)
 
+    if(rec_buffer.shape[0] > nRefFrames):
+      rec_buffer = np.delete(rec_buffer, nRefFrames, 0)
+    
     rec_buffer = np.insert(rec_buffer, 0, conc_reconstructed, axis=0)
         
-    if(rec_buffer.shape[0] > nRefFrames):
-      rec_buffer = np.delete(rec_buffer, (nRefFrames - 1), 0)
 
   decoded.close()
   print("Decoding Completed")
@@ -641,11 +642,11 @@ def replace_value_for(current_value):
 
 if __name__ == "__main__":
 
-  out_file = "./videos/tests/QP7-2111_encoded.far"
+  out_file = "./temp/mv_tool_test.far"
   # out_file = "./temp/assign2_vbs_QP4_.far"
 
   view_blocks = True
-  view_ref_frame = True
+  view_ref_frame = False
   view_mv = False
 
   # if ((view_blocks and view_ref_frame) or (view_blocks and view_mv) or (view_ref_frame and view_mv)):
@@ -653,6 +654,6 @@ if __name__ == "__main__":
   #     quit()
 
   decoder_infile = out_file
-  decoder_outfile = "./videos/a2_decoded.yuv"
+  decoder_outfile = "./videos/a2_block_print.yuv"
 
   decoder(decoder_infile, decoder_outfile, view_blocks, view_ref_frame, view_mv)

@@ -414,7 +414,7 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
 #   else:
 #     return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]]
 
-def intra_prediction(frame, y_idx, x_idx):
+def intra_prediction(frame, bl_y_frame, y_idx, x_idx):
 
   i = frame.shape[2]
 
@@ -437,8 +437,8 @@ def intra_prediction(frame, y_idx, x_idx):
   top_edge_block[:,:] = top_edge
   left_edge_block[:, :] = left_edge
 
-  SAD_top = np.sum(np.abs(np.subtract(frame[y_idx][x_idx], top_edge_block, dtype=int)))
-  SAD_left = np.sum(np.abs(np.subtract(frame[y_idx][x_idx], left_edge_block, dtype=int)))
+  SAD_top = np.sum(np.abs(np.subtract(bl_y_frame, top_edge_block, dtype=int)))
+  SAD_left = np.sum(np.abs(np.subtract(bl_y_frame, left_edge_block, dtype=int)))
 
   if (SAD_top < SAD_left):
     mode = 1
@@ -1176,7 +1176,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
   sub_Q = calculate_Q((int)(i/2), sub_QP)
 
-  Constant = 30
+  Constant = 0.00000000001
   lambda_const = Constant * 2 ** ((QP - 12) / 3)
   split = 0
 
@@ -1229,7 +1229,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
             modes_mv_block += [split]
             modes_mv_block += temp_mode
           else:
-            temp_mode, predicted_block = intra_prediction(new_reconstructed, bl_y_it, bl_x_it)
+            temp_mode, predicted_block = intra_prediction(new_reconstructed, bl_y_frame[frame][bl_y_it][bl_x_it], bl_y_it, bl_x_it)
             modes_mv_block += temp_mode
           
       #  Calculate Residual Matrix
@@ -1312,9 +1312,11 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
       rec_buffer = np.delete(rec_buffer, np.s_[0:nRefFrames], 0)
 
     rec_buffer = np.insert(rec_buffer, 0, conc_reconstructed, axis=0)
-        
+
     if(rec_buffer.shape[0] > nRefFrames):
-      rec_buffer = np.delete(rec_buffer, (nRefFrames - 1), 0)
+      rec_buffer = np.delete(rec_buffer, nRefFrames, 0)
+    
+        
 
     # print(rec_buffer.shape[0])
 
@@ -1338,7 +1340,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   converted.close()
   encoded_file.close()
 
-  # return len_of_frame
+  return len_of_frame
 ##############################################################################
 ##############################################################################
 
@@ -1550,9 +1552,9 @@ def decoder(in_file, out_file):
       rec_buffer = np.delete(rec_buffer, np.s_[0:nRefFrames], 0)
 
     rec_buffer = np.insert(rec_buffer, 0, conc_reconstructed, axis=0)
-        
+
     if(rec_buffer.shape[0] > nRefFrames):
-      rec_buffer = np.delete(rec_buffer, (nRefFrames - 1), 0)
+      rec_buffer = np.delete(rec_buffer, nRefFrames, 0)        
 
   decoded.close()
   print("Decoding Completed")
@@ -1562,21 +1564,21 @@ def decoder(in_file, out_file):
 
 if __name__ == "__main__":
 
-  # in_file = "./videos/black_and_white.yuv"
-  # out_file = "./temp/assign2_vbs_QP4_.far"
+  in_file = "./videos/black_and_white.yuv"
+  out_file = "./temp/mv_tool_test.far"
 
-  in_file = "./videos/synthetic_bw.yuv"
-  out_file = "./temp/synthetic_test.far"
+  # in_file = "./videos/synthetic_bw.yuv"
+  # out_file = "./temp/synthetic_test.far"
 
-  number_frames = 30
+  number_frames = 10
   y_res = 288
   x_res = 352
   i = 16
-  r = 4
+  r = 3
   QP = 4  # from 0 to (log_2(i) + 7)
   i_period = 8
-  nRefFrames = 4
-  VBSEnable = False
+  nRefFrames = 1
+  VBSEnable = True
   FMEEnable = False
   FastME = False
 
@@ -1585,8 +1587,8 @@ if __name__ == "__main__":
   decoder_infile = out_file
   decoder_outfile = "./videos/a2_decoded.yuv"
 
-  # encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
-  # decoder(decoder_infile, decoder_outfile)
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+  decoder(decoder_infile, decoder_outfile)
   
 # ##############################################################################
 # ##############################################################################
@@ -1636,43 +1638,60 @@ if __name__ == "__main__":
 # ##############################################################################
 
 
-# ##############################################################################
-  nRefFrames = 1
-  out_file = "./temp/synthetic_nref_1.far"
-  decoder_infile = out_file
-  decoder_outfile = "./videos/a2_plot/synthetic_nref_1.yuv"
+# # ##############################################################################
+#   nRefFrames = 1
+#   out_file = "./videos/a2_plot/synthetic_nref_1.far"
+#   decoder_infile = out_file
+#   decoder_outfile = "./videos/a2_plot/synthetic_nref_1.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
-  decoder(decoder_infile, decoder_outfile)
+#   size_1 = encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+#   decoder(decoder_infile, decoder_outfile)
 
-# ##############################################################################
+# # ##############################################################################
 
-  nRefFrames = 2
-  out_file = "./videos/a2_plot/synthetic_nref_2.far"
-  decoder_infile = out_file
-  decoder_outfile = "./videos/a2_plot/synthetic_nref_2.yuv"
+#   nRefFrames = 2
+#   out_file = "./videos/a2_plot/synthetic_nref_2.far"
+#   decoder_infile = out_file
+#   decoder_outfile = "./videos/a2_plot/synthetic_nref_2.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
-  decoder(decoder_infile, decoder_outfile)
+#   size_2 = encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+#   decoder(decoder_infile, decoder_outfile)
 
-# ##############################################################################
+# # ##############################################################################
 
-  nRefFrames = 3
-  out_file = "./videos/a2_plot/synthetic_nref_3.far"
-  decoder_infile = out_file
-  decoder_outfile = "./videos/a2_plot/synthetic_nref_3.yuv"
+#   nRefFrames = 3
+#   out_file = "./videos/a2_plot/synthetic_nref_3.far"
+#   decoder_infile = out_file
+#   decoder_outfile = "./videos/a2_plot/synthetic_nref_3.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
-  decoder(decoder_infile, decoder_outfile)
+#   size_3 = encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+#   decoder(decoder_infile, decoder_outfile)
 
-# ##############################################################################
+# # ##############################################################################
 
-  nRefFrames = 4
-  out_file = "./videos/a2_plot/synthetic_nref_4.far"
-  decoder_infile = out_file
-  decoder_outfile = "./videos/a2_plot/synthetic_nref_4.yuv"
+#   nRefFrames = 4
+#   out_file = "./videos/a2_plot/synthetic_nref_4.far"
+#   decoder_infile = out_file
+#   decoder_outfile = "./videos/a2_plot/synthetic_nref_4.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
-  decoder(decoder_infile, decoder_outfile)
+#   size_4 = encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+#   decoder(decoder_infile, decoder_outfile)
 
-# ##############################################################################
+# # ##############################################################################
+
+#   x_axis = range(1, 31)
+#   fig, ax = plt.subplots()
+
+#   ax.plot(x_axis, size_1, 'o:', label='nRefFrame = 1')
+#   ax.plot(x_axis, size_2, 'v-.', label='nRefFrame = 2')
+#   ax.plot(x_axis, size_3, 'D--', label='nRefFrame = 3')
+#   ax.plot(x_axis, size_4, 's:', label='nRefFrame = 4')
+
+
+#   plt.xticks(x_axis)
+#   ax.set(xlabel='Frame', ylabel='Size (Bits)')
+#   ax.grid()
+#   ax.legend()
+
+#   # fig.savefig("test.png")
+#   plt.show()
