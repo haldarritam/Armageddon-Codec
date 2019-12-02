@@ -355,7 +355,7 @@ def nRef_tool(n_past_frames, view_new_reconstructed):
   return view_new_reconstructed
 
 
-def draw_line(curr_pos, dest_pos, frame):
+def draw_line(curr_pos, dest_pos, frame, y_res, x_res):
 
   y0 = curr_pos[0]
   x0 = curr_pos[1]
@@ -390,11 +390,14 @@ def draw_line(curr_pos, dest_pos, frame):
 	
   for x in range(x0, x1 + 1):
     
-    # print(y, x)
     if (is_steep):
-      frame[x][y] = 0
+      if((x < y_res) and (y < x_res)):
+        # print(curr_pos, dest_pos, x, y, "Here 1")
+        frame[x][y] = 0
     else:
-      frame[y][x] = 0
+      if((y < y_res) and (x < x_res)):
+        # print(curr_pos, dest_pos, y, x, "Here 2")
+        frame[y][x] = 0
 
     error = error + deltay
 
@@ -657,7 +660,7 @@ def decoder(in_file, out_file):
                 source = [y_mv, x_mv]
                 destination = [(y_mv + modes_mv[lin_iterator][0]), (x_mv + modes_mv[lin_iterator][1])]
 
-                conc_reconstructed = draw_line(source, destination, conc_reconstructed)
+                conc_reconstructed = draw_line(source, destination, conc_reconstructed, y_res, x_res)
               lin_iterator += 1
             else:
               lin_iterator += 1
@@ -672,7 +675,7 @@ def decoder(in_file, out_file):
                   source = [sub_y_mv[index], sub_x_mv[index]]
                   destination = [(sub_y_mv[index] + modes_mv[lin_iterator][0]), (sub_x_mv[index] + modes_mv[lin_iterator][1])]
 
-                  conc_reconstructed = draw_line(source, destination, conc_reconstructed)
+                  conc_reconstructed = draw_line(source, destination, conc_reconstructed, y_res, x_res)
 
                 lin_iterator += 1
 

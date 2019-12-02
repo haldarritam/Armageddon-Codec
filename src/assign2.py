@@ -1136,24 +1136,24 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   if (nRefFrames > (i_period - 1)):
     print("nRefFrames is incompatible with i_period.")
     return
-  # print("----------------------------------------------")
-  # print("----------------------------------------------")
-  # print("Q4 Encoder Parameters-")
-  # print("----------------------------------------------")
-  # print("in_file: ", in_file)
-  # print("out_file: ", out_file)
-  # print("number_frames: ", number_frames)
-  # print("y_res: ", y_res)
-  # print("x_res: ", x_res)
-  # print("i: ", i)
-  # print("r: ", r)
-  # print("QP: ", QP)
-  # print("i_period: ", i_period)
-  # print("nRefFrames: ", nRefFrames)
-  # print("VBSEnable: ", VBSEnable)
-  # print("FMEEnable: ", FMEEnable)
-  # print("FastME: ", FastME)
-  # print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("Q4 Encoder Parameters-")
+  print("----------------------------------------------")
+  print("in_file: ", in_file)
+  print("out_file: ", out_file)
+  print("number_frames: ", number_frames)
+  print("y_res: ", y_res)
+  print("x_res: ", x_res)
+  print("i: ", i)
+  print("r: ", r)
+  print("QP: ", QP)
+  print("i_period: ", i_period)
+  print("nRefFrames: ", nRefFrames)
+  print("VBSEnable: ", VBSEnable)
+  print("FMEEnable: ", FMEEnable)
+  print("FastME: ", FastME)
+  print("----------------------------------------------")
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
   # reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
@@ -1384,20 +1384,20 @@ def decoder(in_file, out_file):
   VBSEnable, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   
 
-  # print("----------------------------------------------")
-  # print("----------------------------------------------")
-  # print("Q4 Decoder Parameters-")
-  # print("----------------------------------------------")
-  # print("in_file: ", in_file)
-  # print("out_file: ", out_file)
-  # print("y_res: ", y_res)
-  # print("x_res: ", x_res)
-  # print("i: ", i)
-  # print("QP: ", QP)
-  # print("nRefFrames: ", nRefFrames)
-  # print("FMEEnable: ", FMEEnable)
-  # print("VBSEnable: ", VBSEnable)
-  # print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("----------------------------------------------")
+  print("Q4 Decoder Parameters-")
+  print("----------------------------------------------")
+  print("in_file: ", in_file)
+  print("out_file: ", out_file)
+  print("y_res: ", y_res)
+  print("x_res: ", x_res)
+  print("i: ", i)
+  print("QP: ", QP)
+  print("nRefFrames: ", nRefFrames)
+  print("FMEEnable: ", FMEEnable)
+  print("VBSEnable: ", VBSEnable)
+  print("----------------------------------------------")
 
   bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   mdiff_encoded_bitstream = encoded_bitstream[encoded_idx: encoded_idx + bits_in_mdiff]
@@ -1564,18 +1564,19 @@ def decoder(in_file, out_file):
 
 if __name__ == "__main__":
 
-  in_file = "./videos/black_and_white.yuv"
+  # in_file = "./videos/black_and_white.yuv"
+  in_file = "./temp/white.yuv"
   out_file = "./temp/mv_tool_test.far"
 
   # in_file = "./videos/synthetic_bw.yuv"
   # out_file = "./temp/synthetic_test.far"
 
-  number_frames = 10
+  number_frames = 1
   y_res = 288
   x_res = 352
   i = 16
   r = 3
-  QP = 4  # from 0 to (log_2(i) + 7)
+  QP = 7  # from 0 to (log_2(i) + 7)
   i_period = 8
   nRefFrames = 1
   VBSEnable = True

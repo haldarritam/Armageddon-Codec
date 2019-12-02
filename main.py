@@ -4,6 +4,8 @@ import argparse
 sys.path.insert(1, './src')
 
 from assign2 import encoder, decoder
+from tools import decoder as vbs_nref_tool
+from view_mv_tool import decoder as mv_tool
 
 
 if __name__ == "__main__":
@@ -31,7 +33,7 @@ if __name__ == "__main__":
 
   parser.add_argument('-out', help='Output file location.', type=str, metavar='...', required=True)  
 
-  parser.add_argument('-o', help='Operation: (encode) or (decode) or (both)', default='encode', type=str, choices=['encode', 'decode', 'both'])
+  parser.add_argument('-o', help='Operation: (encode) or (decode) or (both) or (vis_vbs) or (vis_nRef) or (vis_mv)', default='encode', type=str, choices=['encode', 'decode', 'both', 'vis_vbs', 'vis_nRef', 'vis_mv'])
   
   parser.add_argument('-nRef', help='Number of reference frames.', default=1, type=int, metavar='default=1')
   
@@ -67,7 +69,7 @@ if __name__ == "__main__":
     encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
   elif (operation == 'decode'):
     decoder(in_file, out_file)
-  else:
+  elif (operation == 'both'):
     file_and_extension = out_file.split(".")
     encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.far"
     decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
@@ -79,3 +81,14 @@ if __name__ == "__main__":
     decoder_end = time.time()
 
     print("Encoder Time: %f | Decoder Time: %f" % ((encoder_end-start), (decoder_end-encoder_end)))
+
+  elif (operation == 'vis_vbs'):
+    vbs_nref_tool(in_file, out_file, True, False)
+  
+  elif (operation == 'vis_nRef'):
+    vbs_nref_tool(in_file, out_file, True, True)
+
+  elif (operation == 'vis_mv'):
+    mv_tool(in_file, out_file)
+
+    

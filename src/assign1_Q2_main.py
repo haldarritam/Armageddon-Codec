@@ -2,9 +2,13 @@ import numpy as np
 import sys
 
 def progress(message, current, total):
-  progress = (int) (current / (total - 1) * 100)
-  sys.stdout.write(message + " %d%%   \r" % (progress) )
-  sys.stdout.flush()
+  if (total != 1):
+    progress = (int) (current / (total - 1) * 100)
+    sys.stdout.write(message + " %d%%   \r" % (progress) )
+    sys.stdout.flush()
+  else:
+    sys.stdout.write(message + " %d%%   \r" % (100) )
+    sys.stdout.flush()
 
 def block(file, y_res, x_res, number_frames, i):
   ext_y_res = y_res
