@@ -213,6 +213,12 @@ def motion_vector_estimation(block, rec_buffer, r, head_idy, head_idx, ext_y_res
               head_idx += mv_test[1]
               #print(mv_new)
               #print(mv_new, mv_test)
+              if abs(mv_new[0] + mv_test[0]) > 16:
+                break
+
+              if abs(mv_new[1] + mv_test[1]) > 16:
+                break
+
               mv_new = (mv_new[0]+mv_test[0], mv_new[1]+mv_test[1], ref_frame)
               #print(mv_new)
               #print(mv_new)
@@ -259,6 +265,13 @@ def fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
               sad_new = sad_test
               head_idy += mv_test[0]
               head_idx += mv_test[1]
+
+              if abs(mv_new[0] + mv_test[0]) > 16:
+                break
+
+              if abs(mv_new[1] + mv_test[1]) > 16:
+                break
+
               mv_new = (mv_new[0]+mv_test[0], mv_new[1]+mv_test[1], ref_frame)
           else:
               iterate = 0
