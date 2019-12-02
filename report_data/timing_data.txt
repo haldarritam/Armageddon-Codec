@@ -1,0 +1,94 @@
+Reading ./videos/tests/QP1-1000_encoded.far
+Decoding Completed100%   
+Encoder Time: 7.121970 | Decoder Time: 3.725351
+Reading ./videos/tests/QP4-1000_encoded.far
+Decoding Completed100%   
+Encoder Time: 6.362022 | Decoder Time: 2.944724
+Reading ./videos/tests/QP4-1000_encoded.far
+Decoding Completed100%   
+Encoder Time: 6.055512 | Decoder Time: 2.821696
+Reading ./videos/tests/QP7-1000_encoded.far
+Decoding Completed100%   
+Encoder Time: 5.807047 | Decoder Time: 2.593876
+Reading ./videos/tests/QP10-1000_encoded.far
+Decoding Completed100%   
+Encoder Time: 5.773504 | Decoder Time: 2.527869
+
+Reading ./videos/tests/QP1-1100_encoded.far
+Decoding Completed100%   
+Encoder Time: 233.873755 | Decoder Time: 7.234127
+Reading ./videos/tests/QP4-1100_encoded.far
+Decoding Completed100%   
+Encoder Time: 186.019012 | Decoder Time: 6.355456
+Reading ./videos/tests/QP4-1100_encoded.far
+Decoding Completed100%   
+Encoder Time: 188.397139 | Decoder Time: 6.493931
+Reading ./videos/tests/QP7-1100_encoded.far
+Decoding Completed100%   
+Encoder Time: 162.353596 | Decoder Time: 8.344255
+Reading ./videos/tests/QP10-1100_encoded.far
+Decoding Completed100%  
+Encoder Time: 143.753330 | Decoder Time: 7.046755
+
+Reading ./videos/tests/QP1-1010_encoded.far
+Decoding Completed100%   
+Encoder Time: 15.982880 | Decoder Time: 3.986517
+Reading ./videos/tests/QP4-1010_encoded.far
+Decoding Completed100%   
+Encoder Time: 15.376916 | Decoder Time: 2.948245
+Reading ./videos/tests/QP4-1010_encoded.far
+Decoding Completed100%   
+Encoder Time: 15.239590 | Decoder Time: 2.909899
+Reading ./videos/tests/QP7-1010_encoded.far
+Decoding Completed100%   
+Encoder Time: 14.968943 | Decoder Time: 2.551490
+Reading ./videos/tests/QP10-1010_encoded.far
+Decoding Completed100%   
+Encoder Time: 14.613200 | Decoder Time: 2.523506
+
+Reading ./videos/tests/QP1-1001_encoded.far
+Decoding Completed100%   
+Encoder Time: 7.703853 | Decoder Time: 3.824884
+Reading ./videos/tests/QP4-1001_encoded.far
+Decoding Completed100%   
+Encoder Time: 6.648647 | Decoder Time: 2.898415
+Reading ./videos/tests/QP4-1001_encoded.far
+Decoding Completed100%   
+Encoder Time: 6.607511 | Decoder Time: 3.317262
+Reading ./videos/tests/QP7-1001_encoded.far
+Decoding Completed100%   
+Encoder Time: 6.176693 | Decoder Time: 2.524380
+Reading ./videos/tests/QP10-1001_encoded.far
+Decoding Completed100%   
+Encoder Time: 6.419584 | Decoder Time: 2.439184
+
+
+
+Reading ./videos/tests/QP1-2000_encoded.far
+Decoding Completed100%   
+Encoder Time: 8.365543 | Decoder Time: 3.774643
+Reading ./videos/tests/QP4-2000_encoded.far
+Decoding Completed100%   
+Encoder Time: 7.508789 | Decoder Time: 2.811940
+Reading ./videos/tests/QP4-2000_encoded.far
+Decoding Completed100%   
+Encoder Time: 7.391971 | Decoder Time: 2.804123
+Reading ./videos/tests/QP7-2000_encoded.far
+Decoding Completed100%   
+Encoder Time: 7.062557 | Decoder Time: 2.465555
+Reading ./videos/tests/QP10-2000_encoded.far
+Decoding Completed100%   
+Encoder Time: 7.198723 | Decoder Time: 2.596049
+
+Reading ./videos/tests/QP1-2111_encoded.far
+Decoding Completed100%   
+Encoder Time: 1555.518175 | Decoder Time: 7.083935
+Reading ./videos/tests/QP4-2111_encoded.far
+Decoding Completed100%   
+Encoder Time: 1179.415969 | Decoder Time: 6.268407
+Reading ./videos/tests/QP7-2111_encoded.far
+Decoding Completed100%   
+Encoder Time: 971.825431 | Decoder Time: 8.927313
+Reading ./videos/tests/QP10-2111_encoded.far
+Decoding Completed100%   
+Encoder Time: 929.942080 | Decoder Time: 8.056263

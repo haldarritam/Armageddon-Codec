@@ -1,0 +1,13 @@
+-in=./videos/black_and_white.yuv
+-out=./videos/report/a2.yuv
+-o=both
+-frames=10 
+-y_res=288 
+-x_res=352 
+-i=16
+-r=4 
+-QP=4
+-ip=4
+-vbs=0
+-fme=0
+-fastME=0

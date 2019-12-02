@@ -3,8 +3,9 @@ import time
 import argparse
 sys.path.insert(1, './src')
 
-from assign1_Q3 import encoder as q3_encoder, decoder as q3_decoder
-from assign1_Q4 import encoder as q4_encoder, decoder as q4_decoder
+from assign2 import encoder, decoder
+from tools import decoder as vbs_nref_tool
+from view_mv_tool import decoder as mv_tool
 
 
 if __name__ == "__main__":
@@ -32,9 +33,15 @@ if __name__ == "__main__":
 
   parser.add_argument('-out', help='Output file location.', type=str, metavar='...', required=True)  
 
-  parser.add_argument('-o', help='Operation: (encode) or (decode) or (both)', default='encode', type=str, choices=['encode', 'decode', 'both'])
+  parser.add_argument('-o', help='Operation: (encode) or (decode) or (both) or (vis_vbs) or (vis_nRef) or (vis_mv)', default='encode', type=str, choices=['encode', 'decode', 'both', 'vis_vbs', 'vis_nRef', 'vis_mv'])
   
-  parser.add_argument('-q', help='Question number.', default=4, type=int, choices=[3, 4], metavar='default=4')
+  parser.add_argument('-nRef', help='Number of reference frames.', default=1, type=int, metavar='default=1')
+  
+  parser.add_argument('-vbs', help='Variable block size enable.', default=0, type=int, choices=[0, 1], metavar='default=0')
+  
+  parser.add_argument('-fme', help='Fractional motion estimation enable.', default=0, type=int, choices=[0, 1], metavar='default=0')
+  
+  parser.add_argument('-fastME', help='Fast motion estimation enable.', default=0, type=int, choices=[0, 1], metavar='default=0')
   
   
   # Reading command line arguments
@@ -50,43 +57,38 @@ if __name__ == "__main__":
   in_file = args['in']
   out_file = args['out']
 
+  nRefFrames = args['nRef']
+  VBSEnable = args['vbs']
+  FMEEnable = args['fme']
+  FastME = args['fastME']
+
   operation = args['o']
-  q = args['q']
+
+
+  if (operation == 'encode'):
+    encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+  elif (operation == 'decode'):
+    decoder(in_file, out_file)
+  elif (operation == 'both'):
+    file_and_extension = out_file.split(".")
+    encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.far"
+    decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
+
+    start = time.time()
+    encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+    encoder_end = time.time()
+    decoder(encoded_name, decoded_name)
+    decoder_end = time.time()
+
+    print("Encoder Time: %f | Decoder Time: %f" % ((encoder_end-start), (decoder_end-encoder_end)))
+
+  elif (operation == 'vis_vbs'):
+    vbs_nref_tool(in_file, out_file, True, False)
   
+  elif (operation == 'vis_nRef'):
+    vbs_nref_tool(in_file, out_file, True, True)
 
-  if (q == 4):
-    if (operation == 'encode'):
-      q4_encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period)
-    elif (operation == 'decode'):
-      q4_decoder(in_file, out_file)
-    else:
-      file_and_extension = out_file.split(".")
-      encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.far"
-      decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
+  elif (operation == 'vis_mv'):
+    mv_tool(in_file, out_file)
 
-      start = time.time()
-      q4_encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, QP, i_period)
-      encoder_end = time.time()
-      q4_decoder(encoded_name, decoded_name)
-      decoder_end = time.time()
-
-      print("Encoder Time: %f | Decoder Time: %f" % ((encoder_end-start), (decoder_end-encoder_end)))
-
-
-  elif (q == 3):
-    if (operation == 'encode'):
-      q3_encoder(in_file, out_file, number_frames, y_res, x_res, i, r, n)
-    elif (operation == 'decode'):
-      q3_decoder(in_file, out_file)
-    else:
-      file_and_extension = out_file.split(".")
-      encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.npz"
-      decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
-
-      start = time.time()
-      print(q3_encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, n))
-      encoder_end = time.time()
-      q3_decoder(encoded_name, decoded_name)
-      decoder_end = time.time()
-
-      print("Encoder Time: %f | Decoder Time: %f" % ((encoder_end-start), (decoder_end-encoder_end)))
+    
