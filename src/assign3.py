@@ -1224,7 +1224,7 @@ def block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl
       qtc_bitstream += exp_golomb_coding(rled)
       bits_in_frame += exp_golomb_coding(rled)
 
-  return qtc_bitstream, bits_in_frame
+  return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame
 
 
 ##############################################################################
@@ -1365,7 +1365,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
         # print(frame, remaining_bits, bit_in_frame, bits_used, QP)
 
-        qtc_bitstream, bits_in_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame)
+        qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame)
 
       bits_used = len(bits_in_frame) + len(differentiated_modes_mv_frame)
 
