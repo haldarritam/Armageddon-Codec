@@ -95,10 +95,10 @@ class CSC:
 if __name__ == "__main__":
     converter = CSC()
     number_frames = 21
-    x_res = 176
-    y_res = 144
+    x_res = 176*2
+    y_res = 144*2
     # converter.ftz_to_fff("../videos/foreman_cif.yuv", y_res, x_res, number_frames)
-    converter.ftz_to_bw("./videos/QCIF.yuv", "./videos/QCIF_bw.yuv",  y_res, x_res, number_frames)
+    converter.ftz_to_bw("./videos/CIF.yuv", "./videos/CIF_bw.yuv",  y_res, x_res, number_frames)
 
 
     
