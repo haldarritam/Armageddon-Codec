@@ -1226,6 +1226,46 @@ def block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl
 
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame
 
+def QP_select(bit_stats_list, remaining_bits):
+  QP = min(range(len(bit_stats_list)), key=lambda i: abs(bit_stats_list[i] - remaining_bits))
+
+  return QP
+
+def rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p_block, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, Constant, QP_list, prev_QP, remaining_bits):
+
+  remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
+      
+  if (y_res == 288):
+    if(is_p_block):
+      QP = QP_select(cif_approx_p, remaining_bits)
+    else:
+      QP = QP_select(cif_approx_i, remaining_bits)
+  elif (y_res == 144):
+    if(is_p_block):
+      QP = QP_select(qcif_approx_p, remaining_bits)
+    else:
+      QP = QP_select(qcif_approx_i, remaining_bits)
+  else:
+    print("Resolution not supported!")
+    quit()
+
+  Q = calculate_Q(i, QP)
+
+  sub_QP = 0
+  if (QP == 0):
+    sub_QP = 0
+  else:
+    sub_QP = QP - 1
+
+  sub_Q = calculate_Q((int)(i/2), sub_QP)
+  lambda_const = Constant * 2 ** ((QP - 12) / 3)
+
+
+  QP_list += [prev_QP - QP]
+  prev_QP = QP
+
+  return QP, Q, sub_QP, lambda_const, QP_list, prev_QP, remaining_bits
+
 
 ##############################################################################
 ##############################################################################
@@ -1332,41 +1372,49 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
     for bl_y_it in range(n_y_blocks):
 
-      if(RCflag):
-        remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
+      if (RCflag):
+        QP, Q, sub_QP, lambda_const, QP_list, prev_QP, remaining_bits = rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p_block, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, Constant, QP_list, prev_QP, remaining_bits)
+
+        # remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
+      
+        # if (y_res == 288):
+        #   if(is_p_block):
+        #     QP = QP_select(cif_approx_p, remaining_bits)
+        #   else:
+        #     QP = QP_select(cif_approx_i, remaining_bits)
+        # elif (y_res == 144):
+        #   if(is_p_block):
+        #     QP = QP_select(qcif_approx_p, remaining_bits)
+        #   else:
+        #     QP = QP_select(qcif_approx_i, remaining_bits)
+        # else:
+        #   print("Resolution not supported!")
+        #   quit()
+
+        # Q = calculate_Q(i, QP)
+
+        # sub_QP = 0
+        # if (QP == 0):
+        #   sub_QP = 0
+        # else:
+        #   sub_QP = QP - 1
+
+        # sub_Q = calculate_Q((int)(i/2), sub_QP)
+        # lambda_const = Constant * 2 ** ((QP - 12) / 3)
+
+
+        # QP_list += [prev_QP - QP]
+        # prev_QP = QP
         
-        if (y_res == 288):
-          if(is_p_block):
-            QP = min(range(len(cif_approx_p)), key=lambda i: abs(cif_approx_p[i] - remaining_bits))
-          else:
-            QP = min(range(len(cif_approx_i)), key=lambda i: abs(cif_approx_i[i] - remaining_bits))
-        elif (y_res == 144):
-          if(is_p_block):
-            QP = min(range(len(qcif_approx_p)), key=lambda i: abs(qcif_approx_p[i] - remaining_bits))
-          else:
-            QP = min(range(len(qcif_approx_i)), key=lambda i: abs(qcif_approx_i[i] - remaining_bits))
-        else:
-          print("Resolution not supported!")
-          quit()
-
-        Q = calculate_Q(i, QP)
-
-        sub_QP = 0
-        if (QP == 0):
-          sub_QP = 0
-        else:
-          sub_QP = QP - 1
-
-        sub_Q = calculate_Q((int)(i/2), sub_QP)
-        lambda_const = Constant * 2 ** ((QP - 12) / 3)
-
-
-        QP_list += [prev_QP - QP]
-        prev_QP = QP
 
         # print(frame, remaining_bits, bit_in_frame, bits_used, QP)
 
+      print(QP, sub_QP, lambda_const, remaining_bits)
+      # First Pass
       qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame)
+
+      # Second Pass
+      # qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame)
 
       bits_used = len(bits_in_frame) + len(differentiated_modes_mv_frame)
       frame_accumulated_bits_used += bits_used
@@ -1377,7 +1425,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
     len_of_frame += [len(bits_in_frame)]
 
-    print(frame, frame_accumulated_bits_used)
+    # print(frame, frame_accumulated_bits_used)
 
     # insert i_period data/writing (modes_mv)
     if (is_p_block):
@@ -1698,7 +1746,7 @@ if __name__ == "__main__":
   # in_file = "./videos/synthetic_bw.yuv"
   # out_file = "./temp/synthetic_test.far"
 
-  number_frames = 21
+  number_frames = 10
   y_res = 288
   x_res = 352
   i = 16
@@ -1709,7 +1757,7 @@ if __name__ == "__main__":
   VBSEnable = True
   FMEEnable = True
   FastME = True
-  RCflag = False
+  RCflag = 1
   targetBR = 2458 # kbps
 
   # bits_in_each_frame = []
