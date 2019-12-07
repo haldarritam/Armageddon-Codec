@@ -1148,7 +1148,7 @@ def transform_quantize(residual_matrix, frame, bl_y_it, bl_x_it, Q, sub_Q, split
   return QTC
 
 
-def block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame):
+def block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, pass_num):
   for bl_x_it in range(n_x_blocks):
 
     # print("--------------- : ", frame)
@@ -1219,7 +1219,6 @@ def block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl
     scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
     rled_block = RLE(scanned_block)
 
-    
     for rled in rled_block:
       qtc_bitstream += exp_golomb_coding(rled)
       bits_in_frame += exp_golomb_coding(rled)
@@ -1231,11 +1230,64 @@ def QP_select(bit_stats_list, remaining_bits):
 
   return QP
 
-def rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p_block, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, Constant, QP_list, prev_QP, remaining_bits):
+def rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p_block, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, Constant, QP_list, prev_QP, remaining_bits, RCflag):
 
-  remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
-      
-  if (y_res == 288):
+  print(bits_used)
+
+  print(bit_in_frame, bits_used, n_y_blocks, bl_y_it)
+  if (RCflag):
+    remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
+
+        
+    if (y_res == 288):
+      if(is_p_block):
+        QP = QP_select(cif_approx_p, remaining_bits)
+      else:
+        QP = QP_select(cif_approx_i, remaining_bits)
+    elif (y_res == 144):
+      if(is_p_block):
+        QP = QP_select(qcif_approx_p, remaining_bits)
+      else:
+        QP = QP_select(qcif_approx_i, remaining_bits)
+    else:
+      print("Resolution not supported!")
+      quit()
+
+    Q = calculate_Q(i, QP)
+
+    sub_QP = 0
+    if (QP == 0):
+      sub_QP = 0
+    else:
+      sub_QP = QP - 1
+
+    sub_Q = calculate_Q((int)(i/2), sub_QP)
+    lambda_const = Constant * 2 ** ((QP - 12) / 3)
+
+
+    QP_list += [prev_QP - QP]
+    prev_QP = QP
+
+  return QP, Q, sub_QP, lambda_const, QP_list, prev_QP, remaining_bits
+
+def calc_QP_dependents(QP, Constant):
+  Q = calculate_Q(i, QP)
+  sub_QP = 0
+  if (QP == 0):
+    sub_QP = 0
+  else:
+    sub_QP = QP - 1
+
+  sub_Q = calculate_Q((int)(i/2), sub_QP)
+  lambda_const = Constant * 2 ** ((QP - 12) / 3)
+
+  return Q, sub_QP, sub_Q, lambda_const
+
+
+def QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits):
+  if (type(approx_per_row_bits) != int):
+    QP = QP_select(approx_per_row_bits, remaining_bits)
+  elif (y_res == 288):
     if(is_p_block):
       QP = QP_select(cif_approx_p, remaining_bits)
     else:
@@ -1249,24 +1301,9 @@ def rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p
     print("Resolution not supported!")
     quit()
 
-  Q = calculate_Q(i, QP)
+  Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
 
-  sub_QP = 0
-  if (QP == 0):
-    sub_QP = 0
-  else:
-    sub_QP = QP - 1
-
-  sub_Q = calculate_Q((int)(i/2), sub_QP)
-  lambda_const = Constant * 2 ** ((QP - 12) / 3)
-
-
-  QP_list += [prev_QP - QP]
-  prev_QP = QP
-
-  return QP, Q, sub_QP, lambda_const, QP_list, prev_QP, remaining_bits
-
-
+  return QP, Q, sub_QP, sub_Q, lambda_const
 ##############################################################################
 ##############################################################################
 
@@ -1327,18 +1364,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
   approx_residual = np.empty((number_frames, n_y_blocks, n_x_blocks, i, i), dtype=int)
 
-  Q = calculate_Q(i, QP)
-
-  sub_QP = 0
-  if (QP == 0):
-    sub_QP = 0
-  else:
-    sub_QP = QP - 1
-
-  sub_Q = calculate_Q((int)(i/2), sub_QP)
-
   Constant = 35
-  lambda_const = Constant * 2 ** ((QP - 12) / 3)
+  Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
+
   split = 0
 
   new_reconstructed = np.empty((n_y_blocks, n_x_blocks, i, i), dtype = int)
@@ -1355,6 +1383,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
   len_of_frame = []
 
+  prev_frame_size = 0
+  prev_avg_QP = 0
+
   for frame in range(number_frames):
 
     differentiated_modes_mv_frame = ''
@@ -1366,60 +1397,83 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
     is_p_block = frame % i_period
 
     bits_used = 0
-    frame_accumulated_bits_used = 0
     prev_QP = 0
     QP_list = []
+    true_QP = []
+
+    bits_per_block_row = []
+    prev_size = 0
+    bit_proportion = 0
+
+    scene_change = 0
+    approx_per_row_bits = 0
+
+    if (RCflag == 2):
+
+      row_bits = bit_in_frame // n_y_blocks
+
+      if (frame==0):
+        QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(row_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits)
+      else:
+        QP = int(round(prev_avg_QP))
+        Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
+
+
+      for bl_y_it in range(n_y_blocks):
+
+        # First Pass
+        _, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, 1)
+        
+        bits_per_block_row += [len(bits_in_frame) + len(differentiated_modes_mv_frame) - prev_size]
+        prev_size = len(bits_in_frame) + len(differentiated_modes_mv_frame)
+
+      total_bit_in_frame = len(bits_in_frame) + len(differentiated_modes_mv_frame)
+
+      bit_proportion = np.array(bits_per_block_row) / total_bit_in_frame
+
+      if (is_p_block and ((total_bit_in_frame / prev_frame_size) >= 1.3)):
+        is_p_block = 0
+        scene_change = 1
+
+      prev_frame_size = total_bit_in_frame
+
+      if ((y_res == 288) and is_p_block):
+        approx_per_row_bits = np.array(cif_approx_p) * ((total_bit_in_frame/n_y_blocks)/cif_approx_p[QP])
+      elif ((y_res == 288) and not is_p_block):
+        approx_per_row_bits = np.array(cif_approx_i) * ((total_bit_in_frame/n_y_blocks)/cif_approx_i[QP])
+      elif ((y_res == 144) and is_p_block):
+        approx_per_row_bits = np.array(qcif_approx_p) * ((total_bit_in_frame/n_y_blocks)/qcif_approx_p[QP])
+      elif ((y_res == 144) and not is_p_block):
+        approx_per_row_bits = np.array(qcif_approx_i) * ((total_bit_in_frame/n_y_blocks)/qcif_approx_i[QP])
+
+    bits_in_frame = ''
+    differentiated_modes_mv_frame = ''
 
     for bl_y_it in range(n_y_blocks):
 
+      # print(bits_used)
+
+      # QP, Q, sub_QP, lambda_const, QP_list, prev_QP, remaining_bits = rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p_block, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, Constant, QP_list, prev_QP, remaining_bits, RCflag)
+
       if (RCflag):
-        QP, Q, sub_QP, lambda_const, QP_list, prev_QP, remaining_bits = rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p_block, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, Constant, QP_list, prev_QP, remaining_bits)
-
-        # remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
+        if((RCflag == 1) or scene_change):
+          remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
+        elif (RCflag == 2):
+          remaining_bits = bit_proportion[bl_y_it] * bit_in_frame
       
-        # if (y_res == 288):
-        #   if(is_p_block):
-        #     QP = QP_select(cif_approx_p, remaining_bits)
-        #   else:
-        #     QP = QP_select(cif_approx_i, remaining_bits)
-        # elif (y_res == 144):
-        #   if(is_p_block):
-        #     QP = QP_select(qcif_approx_p, remaining_bits)
-        #   else:
-        #     QP = QP_select(qcif_approx_i, remaining_bits)
-        # else:
-        #   print("Resolution not supported!")
-        #   quit()
+        QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits) 
 
-        # Q = calculate_Q(i, QP)
-
-        # sub_QP = 0
-        # if (QP == 0):
-        #   sub_QP = 0
-        # else:
-        #   sub_QP = QP - 1
-
-        # sub_Q = calculate_Q((int)(i/2), sub_QP)
-        # lambda_const = Constant * 2 ** ((QP - 12) / 3)
-
-
-        # QP_list += [prev_QP - QP]
-        # prev_QP = QP
-        
-
-        # print(frame, remaining_bits, bit_in_frame, bits_used, QP)
-
-      print(QP, sub_QP, lambda_const, remaining_bits)
-      # First Pass
-      qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame)
+        true_QP += [QP]
+        QP_list += [prev_QP - QP]
+        prev_QP = QP
 
       # Second Pass
-      # qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame)
+      qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, 2)
 
       bits_used = len(bits_in_frame) + len(differentiated_modes_mv_frame)
-      frame_accumulated_bits_used += bits_used
 
     if (RCflag):
+      prev_avg_QP = np.mean(true_QP)
       for diff_QP_val in list(reversed(QP_list)):
         differentiated_modes_mv_frame = exp_golomb_coding(diff_QP_val) + differentiated_modes_mv_frame
 
@@ -1757,7 +1811,7 @@ if __name__ == "__main__":
   VBSEnable = True
   FMEEnable = True
   FastME = True
-  RCflag = 1
+  RCflag = 2
   targetBR = 2458 # kbps
 
   # bits_in_each_frame = []
