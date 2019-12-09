@@ -289,7 +289,7 @@ def fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
       return mv_non_fastme, sad_non_fastme
 
 
-def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled, FastME, nRefFrames):
+def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled, FastME, nRefFrames, RCflag, split, mv_input, mv_iterator):
 
   if (i != 4 and i != 8 and i != 16):
     print("Block size should be 4, 8 or 16 when VBS enabled!")
@@ -340,98 +340,40 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
   mv = (0, 0, 0)
   sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
 
-  mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
+  if ((RCflag == 0) or (RCflag == 1) or (RCflag == 2)):
 
-    # Sub-block prediction
-  for sub_idx in range(4):
-    sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx], sub_head_idx[sub_idx], ext_y_res, ext_x_res, sub_i, FMEEnabled, FastME, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
+    print("RC: 0, 1 or 2" )
 
-  RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
+    mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
+      # Sub-block prediction
+    for sub_idx in range(4):
+      sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx], sub_head_idx[sub_idx], ext_y_res, ext_x_res, sub_i, FMEEnabled, FastME, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
+    RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
+    if (best_RDO_block < RDO_sub):
+      return [0, mv], 0
+    else:
+      return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]], 0
 
-  if (best_RDO_block < RDO_sub):
-    return [0, mv]
-  else:
-    return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]]
+  elif ((RCflag == 3) and split == 0):
 
-# def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnabled):
+    print("RC: 3, split: 0" )
 
-#   if (i != 4 and i != 8 and i != 16):
-#     print("Block size should be 4, 8 or 16 when VBS enabled!")
-#     print("Exiting...")
-#     exit()
-
-#   sub_i = (int)(i / 2)
-
-#   up_r = r
-#   if (FMEEnabled):
-#     up_r = 2 * r
-
-#   # Extract the sub-blocks
-#   sub_block = []
-
-#   sub_block += [block[0: sub_i, 0: sub_i]]
-#   sub_block += [block[0: sub_i, sub_i: sub_i + sub_i]]
-#   sub_block += [block[sub_i: sub_i + sub_i, 0: sub_i]]
-#   sub_block += [block[sub_i: sub_i + sub_i, sub_i: sub_i + sub_i]]
-
-#   sub_head_idy = [head_idy, head_idy, head_idy + sub_i, head_idy + sub_i]
-#   sub_head_idx = [head_idx, head_idx + sub_i, head_idx, head_idx + sub_i]
-
-
-#   # Setting up the initial best block value using mv=(0, 0, 0)
-#   extracted_block = FME_extraction(FMEEnabled, i, head_idy, head_idx, 0, 0, ext_y_res, ext_x_res, rec_buffer[0])
-
-#   best_RDO_block = calc_RDO(extracted_block, block, Q, lambda_const) + 1
-
-#   # Setting up the initial best sub-block value using mv=(0, 0, 0)
-#   extracted_sub = []
-  
-#   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[0], sub_head_idx[0], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
-  
-#   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[1], sub_head_idx[1], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
+    mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy + mv_input[mv_iterator][0], head_idx + mv_input[mv_iterator][1], ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
     
-#   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[2], sub_head_idx[2], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
-    
-#   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[3], sub_head_idx[3], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
-  
-#   best_RDO_sub = []
+    mv_iterator += 1
+    return [0, mv], mv_iterator
 
-#   best_RDO_sub += [calc_RDO(extracted_sub[0], sub_block[0], sub_Q, lambda_const)+1]
-#   best_RDO_sub += [calc_RDO(extracted_sub[1], sub_block[1], sub_Q, lambda_const)+1]
-#   best_RDO_sub += [calc_RDO(extracted_sub[2], sub_block[2], sub_Q, lambda_const)+1]
-#   best_RDO_sub += [calc_RDO(extracted_sub[3], sub_block[3], sub_Q, lambda_const)+1]
+  elif ((RCflag == 3) and split == 1):
 
-#   mv = (0, 0, 0)
-#   sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
+    print("RC: 3, split: 0" )
 
-#   for buff_idx, reconstructed in enumerate(rec_buffer):
-#     # Block prediction
-#     for y_dir in range(-up_r, (up_r + 1)):
-#       for x_dir in range(-up_r, (up_r + 1)):
+    for sub_idx in range(4):
+      sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx] + mv_input[mv_iterator][0], sub_head_idx[sub_idx] + mv_input[mv_iterator][1], ext_y_res, ext_x_res, sub_i, FMEEnabled, FastME, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
 
-#         if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+      mv_iterator += 1
 
-#           extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
-
-#           best_RDO_block, mv = RDO_sel(extracted, block, Q, lambda_const, y_dir, x_dir, buff_idx, mv, best_RDO_block)
-
-#     # Sub-block prediction
-#     for sub_idx in range(4):
-#       for y_dir in range(-up_r, (up_r + 1)):
-#         for x_dir in range(-up_r, (up_r + 1)):
-
-#           if ((sub_head_idy[sub_idx] + y_dir) >= 0 and (sub_head_idy[sub_idx] + y_dir + sub_i) < ext_y_res and (sub_head_idx[sub_idx] + x_dir) >= 0 and (sub_head_idx[sub_idx] + x_dir + sub_i) < ext_x_res):
-
-#             extracted_sub = FME_extraction(FMEEnabled, sub_i, sub_head_idy[sub_idx], sub_head_idx[sub_idx], y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
-
-#             best_RDO_sub[sub_idx], sub_mv[sub_idx] = RDO_sel(extracted_sub, sub_block[sub_idx], sub_Q, lambda_const, y_dir, x_dir, buff_idx, sub_mv[sub_idx], best_RDO_sub[sub_idx])
-
-#   RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
-
-#   if (best_RDO_block < RDO_sub):
-#     return [0, mv]
-#   else:
-#     return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]]
+    RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
+    return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]], mv_iterator
 
 def intra_prediction(frame, bl_y_frame, y_idx, x_idx):
 
@@ -1147,25 +1089,71 @@ def transform_quantize(residual_matrix, frame, bl_y_it, bl_x_it, Q, sub_Q, split
 
   return QTC
 
+def entropy(is_p_block, VBSEnable, split, differentiated_modes_mv_frame, modes_mv_block, bl_x_it, bl_y_it, QTC, frame):
+  y_range = 0
+  if (is_p_block):
+    if (VBSEnable):
+      if (split == 0):
+        y_range = 2
+      else:
+        y_range = 5
+      differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[0])
 
-def block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, pass_num):
+      for num_mv in range(1, y_range):
+        for index in range(3):
+          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[num_mv][index])
+    else:
+      differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][0])
+      differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][1])
+      differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][2])
+  else:
+    if (VBSEnable):
+      differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[0])
+      if (split == [0]):
+        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[1])
+      else:
+        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[1])
+        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[2])
+        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[3])
+        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[4])
+    else:
+      differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
+
+  # Scanning/RLE/writing (QTC)        
+  scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
+  rled_block = RLE(scanned_block)
+
+  return rled_block, differentiated_modes_mv_frame
+
+def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RC_pass, mv_mode_in, mv_modes_iterator):
+
+  if (is_p_block):
+    print(mv_modes_iterator, mv_mode_in[mv_modes_iterator])
+
+  splt = 0
+  if (RC_pass == 3):
+    r = 1
+
   for bl_x_it in range(n_x_blocks):
-
-    # print("--------------- : ", frame)
 
     predicted_block = np.empty((i, i), dtype=int)
     if (is_p_block):
       # Calculate Motion Vector (inter)
-      if(VBSEnable):
-        modes_mv_block += motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable, FastME, nRefFrames)
+      if (VBSEnable):
+        if (RCflag == 3):
+          splt = mv_mode_in[mv_modes_iterator]
+          mv_modes_iterator += 1
+
+        temp_mv, mv_modes_iterator = motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable, FastME, nRefFrames, RCflag, splt, mv_mode_in, mv_modes_iterator)
+
+        modes_mv_block += temp_mv
       else:
-        modes_mv_block += motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable, FastME, nRefFrames)
+        temp_mv = motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, (bl_y_it * i) + mv_mode_in[mv_modes_iterator][0], (bl_x_it * i) + mv_mode_in[mv_modes_iterator][1], ext_y_res, ext_x_res, i, FMEEnable, FastME, nRefFrames)
 
-      # print(modes_mv_block)
-      # print(bl_x_it * i)
+        modes_mv_block += temp_mv
+        mv_modes_iterator += 1
+        
       split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
-
-      # print(frame, bl_y_it, bl_x_it, predicted_block[int(i/2)])
 
     else:
       # Calculate mode (intra)
@@ -1187,88 +1175,79 @@ def block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl
     new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, sub_Q, predicted_block, split, i)      
 
   # Differential Encoding
-    if (is_p_block):
-      if (VBSEnable):
-        if (split == 0):
-          y_range = 2
-        else:
-          y_range = 5
-        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[0])
-
-        for num_mv in range(1, y_range):
-          for index in range(3):
-            differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[num_mv][index])
-      else:
-        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][0])
-        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][1])
-        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0][2])
-    else:
-      if (VBSEnable):
-        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[0])
-        if (split == [0]):
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[1])
-        else:
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[1])
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[2])
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[3])
-          differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder_vbs(modes_mv_block, is_p_block, bl_x_it)[4])
-      else:
-        differentiated_modes_mv_frame += exp_golomb_coding(differential_encoder_decoder(modes_mv_block, is_p_block, bl_x_it)[0])
-
-    # Scanning/RLE/writing (QTC)        
-    scanned_block = scanning(QTC[frame][bl_y_it][bl_x_it])
-    rled_block = RLE(scanned_block)
+    rled_block, differentiated_modes_mv_frame = entropy(is_p_block, VBSEnable, split, differentiated_modes_mv_frame, modes_mv_block, bl_x_it, bl_y_it, QTC, frame)
 
     for rled in rled_block:
       qtc_bitstream += exp_golomb_coding(rled)
       bits_in_frame += exp_golomb_coding(rled)
 
-  return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame
+  if (is_p_block):
+    print(mv_modes_iterator)
+  return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_modes_iterator
+
+def block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r):
+
+  mv_mode_out = []
+
+  for bl_x_it in range(n_x_blocks):
+
+    # print("--------------- : ", frame)
+
+    predicted_block = np.empty((i, i), dtype=int)
+    if (is_p_block):
+      # Calculate Motion Vector (inter)
+      if(VBSEnable):
+        temp_mv, _ = motion_vector_estimation_vbs(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, Q, sub_Q, lambda_const, FMEEnable, FastME, nRefFrames, 0, None, None, None)
+
+        mv_mode_out += temp_mv
+        modes_mv_block += temp_mv
+      else:
+        temp_mv = motion_vector_estimation(bl_y_frame[frame][bl_y_it][bl_x_it], rec_buffer, r, bl_y_it * i, bl_x_it * i, ext_y_res, ext_x_res, i, FMEEnable, FastME, nRefFrames)
+
+        mv_mode_out += temp_mv
+        modes_mv_block += temp_mv
+
+      # print(modes_mv_block)
+      # print(bl_x_it * i)
+      split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
+
+      # print(frame, bl_y_it, bl_x_it, predicted_block[int(i/2)])
+
+    else:
+      # Calculate mode (intra)
+      if (VBSEnable):
+        split, temp_mode, predicted_block = intra_prediction_vbs(new_reconstructed, bl_y_frame[frame][bl_y_it][bl_x_it], bl_y_it, bl_x_it, Q, sub_Q, lambda_const)
+        modes_mv_block += [split]
+        mv_mode_out += [split]
+        modes_mv_block += temp_mode
+        mv_mode_out += temp_mode
+      else:
+        temp_mode, predicted_block = intra_prediction(new_reconstructed, bl_y_frame[frame][bl_y_it][bl_x_it], bl_y_it, bl_x_it)
+        modes_mv_block += temp_mode
+        mv_mode_out += temp_mode
+      
+  #  Calculate Residual Matrix
+    residual_matrix[frame][bl_y_it][bl_x_it] = calculate_residual_block(bl_y_frame[frame][bl_y_it][bl_x_it], predicted_block)
+
+  #  Trans/Quant/Rescaling/InvTrans
+    QTC[frame][bl_y_it][bl_x_it] = transform_quantize(residual_matrix, frame, bl_y_it, bl_x_it, Q, sub_Q, split, i)
+
+  #  Decode
+    new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, sub_Q, predicted_block, split, i)      
+
+  # Differential Encoding
+    rled_block, differentiated_modes_mv_frame = entropy(is_p_block, VBSEnable, split, differentiated_modes_mv_frame, modes_mv_block, bl_x_it, bl_y_it, QTC, frame)
+
+    for rled in rled_block:
+      qtc_bitstream += exp_golomb_coding(rled)
+      bits_in_frame += exp_golomb_coding(rled)
+
+  return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_mode_out
 
 def QP_select(bit_stats_list, remaining_bits):
   QP = min(range(len(bit_stats_list)), key=lambda i: abs(bit_stats_list[i] - remaining_bits))
 
   return QP
-
-def rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p_block, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, Constant, QP_list, prev_QP, remaining_bits, RCflag):
-
-  print(bits_used)
-
-  print(bit_in_frame, bits_used, n_y_blocks, bl_y_it)
-  if (RCflag):
-    remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
-
-        
-    if (y_res == 288):
-      if(is_p_block):
-        QP = QP_select(cif_approx_p, remaining_bits)
-      else:
-        QP = QP_select(cif_approx_i, remaining_bits)
-    elif (y_res == 144):
-      if(is_p_block):
-        QP = QP_select(qcif_approx_p, remaining_bits)
-      else:
-        QP = QP_select(qcif_approx_i, remaining_bits)
-    else:
-      print("Resolution not supported!")
-      quit()
-
-    Q = calculate_Q(i, QP)
-
-    sub_QP = 0
-    if (QP == 0):
-      sub_QP = 0
-    else:
-      sub_QP = QP - 1
-
-    sub_Q = calculate_Q((int)(i/2), sub_QP)
-    lambda_const = Constant * 2 ** ((QP - 12) / 3)
-
-
-    QP_list += [prev_QP - QP]
-    prev_QP = QP
-
-  return QP, Q, sub_QP, lambda_const, QP_list, prev_QP, remaining_bits
 
 def calc_QP_dependents(QP, Constant):
   Q = calculate_Q(i, QP)
@@ -1408,7 +1387,10 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
     scene_change = 0
     approx_per_row_bits = 0
 
-    if (RCflag == 2):
+    mv_mode_out = []
+    mv_modes_iterator = 0
+
+    if (RCflag > 1):
 
       row_bits = bit_in_frame // n_y_blocks
 
@@ -1422,7 +1404,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
       for bl_y_it in range(n_y_blocks):
 
         # First Pass
-        _, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, 1)
+        _, bits_in_frame, differentiated_modes_mv_frame, temp_mv_mode_out = block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r)
+
+        mv_mode_out += temp_mv_mode_out
         
         bits_per_block_row += [len(bits_in_frame) + len(differentiated_modes_mv_frame) - prev_size]
         prev_size = len(bits_in_frame) + len(differentiated_modes_mv_frame)
@@ -1459,7 +1443,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         if((RCflag == 1) or scene_change):
           remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
         elif (RCflag == 2):
-          remaining_bits = bit_proportion[bl_y_it] * bit_in_frame
+          remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
+          remaining_bits *= bit_proportion[bl_y_it]
       
         QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits) 
 
@@ -1468,7 +1453,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         prev_QP = QP
 
       # Second Pass
-      qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame = block_encoding(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, 2)
+      qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_modes_iterator = block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RCflag, mv_mode_out, mv_modes_iterator)
 
       bits_used = len(bits_in_frame) + len(differentiated_modes_mv_frame)
 
