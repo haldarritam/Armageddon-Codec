@@ -1820,8 +1820,8 @@ if __name__ == "__main__":
   VBSEnable = True
   FMEEnable = True
   FastME = True
-  RCflag = 2
-  targetBR = 2458 # kbps
+  RCflag = 3
+  targetBR = 24580 # kbps
 
   # bits_in_each_frame = []
 
