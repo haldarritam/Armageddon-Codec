@@ -342,7 +342,7 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
 
   if ((RCflag == 0) or (RCflag == 1) or (RCflag == 2)):
 
-    print("RC: 0, 1 or 2" )
+    # print("RC: 0, 1 or 2" )
 
     mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
       # Sub-block prediction
@@ -1127,8 +1127,8 @@ def entropy(is_p_block, VBSEnable, split, differentiated_modes_mv_frame, modes_m
 
 def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RC_pass, mv_mode_in, mv_modes_iterator):
 
-  if (is_p_block):
-    print(mv_modes_iterator, mv_mode_in[mv_modes_iterator])
+  # if (is_p_block):
+  #   print(mv_modes_iterator, mv_mode_in[mv_modes_iterator])
 
   splt = 0
   if (RC_pass == 3):
@@ -1181,8 +1181,8 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
       qtc_bitstream += exp_golomb_coding(rled)
       bits_in_frame += exp_golomb_coding(rled)
 
-  if (is_p_block):
-    print(mv_modes_iterator)
+  # if (is_p_block):
+  #   print(mv_modes_iterator)
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_modes_iterator
 
 def block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r):
@@ -1291,7 +1291,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   cif_approx_i = [27248,27280,21128,15544,10680,6992,4360,2624,1416,664,264,176]
   cif_approx_p = [23192,16696,11904,7984,4888,2720,1608,1152,1024,904,736,664]
   qcif_approx_i = [7424,7424,5856,4464,3328,2368,1600,1000,552,256,96,64]
-  qcif_approx_p = [5656,4216,3064,2192,1480,912,496,312,280,248,208,184]
+  qcif_approx_p = [5656, 4216, 3064, 2192, 1480, 912, 496, 312, 280, 248, 208, 184]
+  
+  threshold_list = [28324, 28709, 28474, 28057, 27513, 185570, 123879, 125766, 127108, 78226, 124162, 78569]
 
   if (nRefFrames > (i_period - 1)):
     print("\n\n\n*****  nRefFrames is incompatible with i_period.  *****\n\n\n")
@@ -1365,7 +1367,13 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   prev_frame_size = 0
   prev_avg_QP = 0
 
+  is_p_block = -1
+
   for frame in range(number_frames):
+
+
+    print("frame: ", frame)
+
 
     differentiated_modes_mv_frame = ''
 
@@ -1373,7 +1381,10 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
     modes_mv_block = []
 
-    is_p_block = frame % i_period
+    is_p_block += 1
+
+    if ((frame % i_period) == 0):
+      is_p_block = 0
 
     bits_used = 0
     prev_QP = 0
@@ -1400,6 +1411,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         QP = int(round(prev_avg_QP))
         Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
 
+      # QP = override
 
       for bl_y_it in range(n_y_blocks):
 
@@ -1415,14 +1427,24 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
       bit_proportion = np.array(bits_per_block_row) / total_bit_in_frame
 
-      if (is_p_block and ((total_bit_in_frame / prev_frame_size) >= 1.3)):
+      # if (is_p_block and ((total_bit_in_frame / prev_frame_size) >= 1.3)):
+      #   is_p_block = 0
+      #   scene_change = 1
+     
+      print("QP: ", QP, "total: ", total_bit_in_frame, "thresh: ", threshold_list[QP])
+      if (is_p_block and (total_bit_in_frame >= threshold_list[QP])):
         is_p_block = 0
         scene_change = 1
 
       prev_frame_size = total_bit_in_frame
 
+      print("is_p_frame: ", is_p_block, "\n")
+
       if ((y_res == 288) and is_p_block):
-        approx_per_row_bits = np.array(cif_approx_p) * ((total_bit_in_frame/n_y_blocks)/cif_approx_p[QP])
+        approx_per_row_bits = np.array(cif_approx_p) * ((total_bit_in_frame / n_y_blocks) / cif_approx_p[QP])
+        
+        # print("new: ", approx_per_row_bits[QP], "old: ", cif_approx_p[QP], "fact: ", ((total_bit_in_frame / n_y_blocks) / cif_approx_p[QP]))
+
       elif ((y_res == 288) and not is_p_block):
         approx_per_row_bits = np.array(cif_approx_i) * ((total_bit_in_frame/n_y_blocks)/cif_approx_i[QP])
       elif ((y_res == 144) and is_p_block):
@@ -1443,8 +1465,11 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         if((RCflag == 1) or scene_change):
           remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
         elif (RCflag == 2):
-          remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
-          remaining_bits *= bit_proportion[bl_y_it]
+          remaining_bits = (bit_in_frame - bits_used)
+          proportion_adj_factor =  1 / np.sum(bit_proportion[bl_y_it:])
+          remaining_bits *= (bit_proportion[bl_y_it] * proportion_adj_factor)
+          
+          # print("b_prop: ", (bit_proportion[bl_y_it] * proportion_adj_factor), "b_allo: ", remaining_bits, "b_rem: ", (bit_in_frame - bits_used))
       
         QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits) 
 
@@ -1790,7 +1815,7 @@ if __name__ == "__main__":
   x_res = 352
   i = 16
   r = 1
-  QP = 11  # from 0 to (log_2(i) + 7)
+  QP = 6  # from 0 to (log_2(i) + 7)
   i_period = 4
   nRefFrames = 1
   VBSEnable = True
