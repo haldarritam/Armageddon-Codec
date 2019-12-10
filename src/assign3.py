@@ -34,7 +34,7 @@ def find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, o
           for y_dir in range(negative, positive):
               for x_dir in range(negative, positive):
                   if((origin != 1 and (check%2)==0) or origin == 1):
-                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i - 1) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i - 1) < ext_x_res):
+                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
                           #print(reconstructed.shape)
                           # extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
                           extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
@@ -86,7 +86,7 @@ def find_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
               for x_dir in range(negative, positive):
                   if ((origin != 1 and (check % 2) == 0) or origin == 1):
                     
-                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i - 1) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i - 1) < ext_x_res):
+                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
 
                           extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
 
@@ -104,9 +104,9 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
   if(FMEEnabled):
     dy_dir = int(y_dir/2)
     dx_dir = int(x_dir/2)
-    move_is_inside_frame = (head_idy + dy_dir) >= 0 and (head_idy + dy_dir + i - 1) < ext_y_res and (head_idx + dx_dir) >= 0 and (head_idx + dx_dir + i - 1) < ext_x_res
+    move_is_inside_frame = (head_idy + dy_dir) >= 0 and (head_idy + dy_dir + i) < ext_y_res and (head_idx + dx_dir) >= 0 and (head_idx + dx_dir + i) < ext_x_res
   else:
-    move_is_inside_frame = (head_idy + y_dir) >= 0 and (head_idy + y_dir + i - 1) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i - 1) < ext_x_res
+    move_is_inside_frame = (head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res
     
   if (move_is_inside_frame):
     if (not FMEEnabled):
@@ -124,9 +124,8 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
       dy_dir = int(y_dir/2)
       dx_dir = int(x_dir/2)
       
-      if ((head_idy + dy_dir + i + 1) < ext_y_res) and ((head_idx + dx_dir + i + 1) < ext_x_res):
-        print(head_idy, dy_dir, head_idx, dx_dir, y_dir, x_dir)
-        extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+      #print(head_idy, dy_dir, head_idx, dx_dir, y_dir, x_dir)
+      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1] +
         reconstructed[head_idy + dy_dir + 1: head_idy + dy_dir + i + 1, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 4
@@ -136,8 +135,7 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
       dy_dir = int(y_dir/2)
       dx_dir = int(x_dir/2)
       
-      if (head_idx + dx_dir + i + 1) < ext_x_res:
-        extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 2
 
     else: # y fractional
@@ -145,8 +143,7 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
       dy_dir = int(y_dir/2)
       dx_dir = int(x_dir/2)
       
-      if (head_idy + dy_dir + i + 1) < ext_y_res:
-        extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i]) // 2
         
     # print(head_idy, head_idx)
@@ -344,6 +341,10 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
   mv = (0, 0, 0)
   sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
   sub_mv_ret = sub_mv
+  mv_factor = 1
+
+  if RCflag == 3 and FMEEnabled:
+    mv_factor = 2
 
   if ((RCflag == 0) or (RCflag == 1) or (RCflag == 2)):
 
@@ -363,9 +364,9 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
 
     #print("RC: 3, split: 0" )
 
-    mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy + mv_input[mv_iterator][0]//2, head_idx + mv_input[mv_iterator][1]//2, ext_y_res, ext_x_res, i, FMEEnabled, False, lambda_const, Q, best_RDO_block, nRefFrames)
+    mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy + mv_input[mv_iterator][0], head_idx + mv_input[mv_iterator][1], ext_y_res, ext_x_res, i, FMEEnabled, False, lambda_const, Q, best_RDO_block, nRefFrames)
 
-    mv_ret = [mv[0] + mv_input[mv_iterator][0], mv[1] + mv_input[mv_iterator][1], mv_input[mv_iterator][2]]
+    mv_ret = [mv[0] + mv_input[mv_iterator][0]*mv_factor, mv[1] + mv_input[mv_iterator][1]*mv_factor, mv_input[mv_iterator][2]]
     mv_iterator += 1
     return [0, mv_ret], mv_iterator
 
@@ -375,7 +376,7 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
 
     for sub_idx in range(4):
       sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx] + mv_input[mv_iterator][0], sub_head_idx[sub_idx] + mv_input[mv_iterator][1], ext_y_res, ext_x_res, sub_i, FMEEnabled, False, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
-      sub_mv_ret[sub_idx] = [mv_input[mv_iterator][0] + sub_mv[sub_idx][0], mv_input[mv_iterator][1] + sub_mv[sub_idx][1], sub_mv[sub_idx][2]]
+      sub_mv_ret[sub_idx] = [sub_mv[sub_idx][0] + mv_input[mv_iterator][0]*mv_factor, sub_mv[sub_idx][1] + mv_input[mv_iterator][1]*mv_factor, sub_mv[sub_idx][2]]
       mv_iterator += 1
 
     RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
@@ -1380,6 +1381,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
   prev_frame_size = 0
   prev_avg_QP = 0
+  user_FMEEnable = FMEEnable
 
   for frame in range(number_frames):
 
@@ -1420,6 +1422,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
       for bl_y_it in range(n_y_blocks):
 
         # First Pass
+        if RCflag == 3 :
+          FMEEnable = False
+
         _, bits_in_frame, differentiated_modes_mv_frame, temp_mv_mode_out = block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r)
 
         mv_mode_out += temp_mv_mode_out
@@ -1469,6 +1474,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         prev_QP = QP
 
       # Second Pass
+      if RCflag == 3 :
+        FMEEnable = user_FMEEnable
+
       qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_modes_iterator = block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RCflag, mv_mode_out, mv_modes_iterator)
 
       bits_used = len(bits_in_frame) + len(differentiated_modes_mv_frame)
@@ -1812,7 +1820,7 @@ if __name__ == "__main__":
   VBSEnable = True
   FMEEnable = True
   FastME = True
-  RCflag = 3
+  RCflag = 2
   targetBR = 2458 # kbps
 
   # bits_in_each_frame = []
