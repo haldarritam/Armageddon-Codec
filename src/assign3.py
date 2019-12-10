@@ -34,7 +34,7 @@ def find_mv(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, o
           for y_dir in range(negative, positive):
               for x_dir in range(negative, positive):
                   if((origin != 1 and (check%2)==0) or origin == 1):
-                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i - 1) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i - 1) < ext_x_res):
                           #print(reconstructed.shape)
                           # extracted = reconstructed[head_idy + y_dir : head_idy + y_dir + i, head_idx + x_dir : head_idx + x_dir + i]
                           extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
@@ -86,7 +86,7 @@ def find_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, 
               for x_dir in range(negative, positive):
                   if ((origin != 1 and (check % 2) == 0) or origin == 1):
                     
-                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res):
+                      if ((head_idy + y_dir) >= 0 and (head_idy + y_dir + i - 1) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i - 1) < ext_x_res):
 
                           extracted = FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, ext_x_res, reconstructed)
 
@@ -104,9 +104,9 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
   if(FMEEnabled):
     dy_dir = int(y_dir/2)
     dx_dir = int(x_dir/2)
-    move_is_inside_frame = (head_idy + dy_dir) >= 0 and (head_idy + dy_dir + i) < ext_y_res and (head_idx + dx_dir) >= 0 and (head_idx + dx_dir + i) < ext_x_res
+    move_is_inside_frame = (head_idy + dy_dir) >= 0 and (head_idy + dy_dir + i - 1) < ext_y_res and (head_idx + dx_dir) >= 0 and (head_idx + dx_dir + i - 1) < ext_x_res
   else:
-    move_is_inside_frame = (head_idy + y_dir) >= 0 and (head_idy + y_dir + i) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i) < ext_x_res
+    move_is_inside_frame = (head_idy + y_dir) >= 0 and (head_idy + y_dir + i - 1) < ext_y_res and (head_idx + x_dir) >= 0 and (head_idx + x_dir + i - 1) < ext_x_res
     
   if (move_is_inside_frame):
     if (not FMEEnabled):
@@ -119,12 +119,14 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
       
       extracted = reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i]
 
-    elif (x_dir % 2 and y_dir % 2): # both fractional
+    elif ((x_dir % 2) and (y_dir % 2)): # both fractional
       #print("BOTH FRAC", y_dir, x_dir)
       dy_dir = int(y_dir/2)
       dx_dir = int(x_dir/2)
       
-      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+      if ((head_idy + dy_dir + i + 1) < ext_y_res) and ((head_idx + dx_dir + i + 1) < ext_x_res):
+        print(head_idy, dy_dir, head_idx, dx_dir, y_dir, x_dir)
+        extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1] +
         reconstructed[head_idy + dy_dir + 1: head_idy + dy_dir + i + 1, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 4
@@ -132,9 +134,10 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
     elif (x_dir % 2): # x fractional
       #print("X FRAC", y_dir, x_dir)
       dy_dir = int(y_dir/2)
-      dx_dir = int(x_dir / 2)
+      dx_dir = int(x_dir/2)
       
-      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+      if (head_idx + dx_dir + i + 1) < ext_x_res:
+        extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 2
 
     else: # y fractional
@@ -142,7 +145,8 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
       dy_dir = int(y_dir/2)
       dx_dir = int(x_dir/2)
       
-      extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
+      if (head_idy + dy_dir + i + 1) < ext_y_res:
+        extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i]) // 2
         
     # print(head_idy, head_idx)
@@ -325,9 +329,9 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[0], sub_head_idx[0], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
   
   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[1], sub_head_idx[1], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
-    
+
   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[2], sub_head_idx[2], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
-    
+
   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[3], sub_head_idx[3], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
   
   best_RDO_sub = []
@@ -339,10 +343,11 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
 
   mv = (0, 0, 0)
   sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
+  sub_mv_ret = sub_mv
 
   if ((RCflag == 0) or (RCflag == 1) or (RCflag == 2)):
 
-    print("RC: 0, 1 or 2" )
+    #print("RC: 0, 1 or 2" )
 
     mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
       # Sub-block prediction
@@ -356,24 +361,25 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
 
   elif ((RCflag == 3) and split == 0):
 
-    print("RC: 3, split: 0" )
+    #print("RC: 3, split: 0" )
 
-    mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy + mv_input[mv_iterator][0], head_idx + mv_input[mv_iterator][1], ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
-    
+    mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy + mv_input[mv_iterator][0]//2, head_idx + mv_input[mv_iterator][1]//2, ext_y_res, ext_x_res, i, FMEEnabled, False, lambda_const, Q, best_RDO_block, nRefFrames)
+
+    mv_ret = [mv[0] + mv_input[mv_iterator][0], mv[1] + mv_input[mv_iterator][1], mv_input[mv_iterator][2]]
     mv_iterator += 1
-    return [0, mv], mv_iterator
+    return [0, mv_ret], mv_iterator
 
   elif ((RCflag == 3) and split == 1):
 
-    print("RC: 3, split: 0" )
+    #print("RC: 3, split: 1" )
 
     for sub_idx in range(4):
-      sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx] + mv_input[mv_iterator][0], sub_head_idx[sub_idx] + mv_input[mv_iterator][1], ext_y_res, ext_x_res, sub_i, FMEEnabled, FastME, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
-
+      sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx] + mv_input[mv_iterator][0], sub_head_idx[sub_idx] + mv_input[mv_iterator][1], ext_y_res, ext_x_res, sub_i, FMEEnabled, False, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
+      sub_mv_ret[sub_idx] = [mv_input[mv_iterator][0] + sub_mv[sub_idx][0], mv_input[mv_iterator][1] + sub_mv[sub_idx][1], sub_mv[sub_idx][2]]
       mv_iterator += 1
 
     RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
-    return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]], mv_iterator
+    return [1, sub_mv_ret[0], sub_mv_ret[1], sub_mv_ret[2], sub_mv_ret[3]], mv_iterator
 
 def intra_prediction(frame, bl_y_frame, y_idx, x_idx):
 
@@ -544,22 +550,28 @@ def intra_prediction_sub_block(frame, block, bl_y_it, bl_x_it, sub_Q, lambda_con
 def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
   if (FMEEnable):
     if ((mv[0] % 2 == 0) and (mv[1] % 2 == 0)): # none fractional
+      #print("None fractional")
+      #print(mv[2], head_idy, mv[0], i, head_idx, mv[1])
+      #print(mv[2], head_idy + mv[0], head_idy + mv[0] + i, head_idx + mv[1], head_idx + mv[1] + i)
       extracted = frame_buff[mv[2]][head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
-    elif (mv[0] % 2 and mv[1] % 2): # both fractional
+    elif ((mv[0] % 2) and (mv[1] % 2)): # both fractional
+      #print("Both fractional")
       dy_dir = int(mv[0]/2)
       dx_dir = int(mv[1]/2)
-            
+      
       extracted = (frame_buff[mv[2]][head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         frame_buff[mv[2]][head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i] +
         frame_buff[mv[2]][head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1] +
         frame_buff[mv[2]][head_idy + dy_dir + 1: head_idy + dy_dir + i + 1, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 4
     elif (mv[1] % 2): # x fractional
+      #print("X fractional")
       dy_dir = int(mv[0]/2)
-      dx_dir = int(mv[1] / 2)
+      dx_dir = int(mv[1]/2)
       
       extracted = (frame_buff[mv[2]][head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         frame_buff[mv[2]][head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 2
     else: # y fractional
+      #print("Y fractional")
       dy_dir = int(mv[0]/2)
       dx_dir = int(mv[1]/2)
             
@@ -567,6 +579,7 @@ def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
         frame_buff[mv[2]][head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i]) // 2
 
   else:
+    #print("Exception")
     # print("\n")
     # print(mv)
     # print(head_idy, head_idx, i)
@@ -576,6 +589,7 @@ def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
     
     # print(extracted.shape)
 
+  #print(extracted)
   return extracted
 
 def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, VBSEnable, FMEEnable):
@@ -596,9 +610,11 @@ def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, VBSEnable, FMEEna
 
         for sub_idx in range(4):
           extracted += [extract_predicted_block(frame_buff, sub_head_idy[sub_idx], sub_head_idx[sub_idx], modes_mv[idx + sub_idx + 1], sub_i, FMEEnable)]
-
+        
         conc_0 = np.concatenate((extracted[0], extracted[1]), axis=1)
         conc_1 = np.concatenate((extracted[2], extracted[3]), axis=1)
+
+        #print(extracted[0].shape, extracted[1].shape, extracted[2].shape, extracted[3].shape)
 
         extracted = np.concatenate((conc_0, conc_1), axis=0)
         
@@ -1127,8 +1143,8 @@ def entropy(is_p_block, VBSEnable, split, differentiated_modes_mv_frame, modes_m
 
 def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RC_pass, mv_mode_in, mv_modes_iterator):
 
-  if (is_p_block):
-    print(mv_modes_iterator, mv_mode_in[mv_modes_iterator])
+  # if (is_p_block):
+  #   print(mv_modes_iterator, mv_mode_in[mv_modes_iterator])
 
   splt = 0
   if (RC_pass == 3):
@@ -1153,10 +1169,10 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
         modes_mv_block += temp_mv
         mv_modes_iterator += 1
         
+      # print(modes_mv_block)
       split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
 
-    else:
-      # Calculate mode (intra)
+    else:      # Calculate mode (intra)
       if (VBSEnable):
         split, temp_mode, predicted_block = intra_prediction_vbs(new_reconstructed, bl_y_frame[frame][bl_y_it][bl_x_it], bl_y_it, bl_x_it, Q, sub_Q, lambda_const)
         modes_mv_block += [split]
@@ -1181,8 +1197,8 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
       qtc_bitstream += exp_golomb_coding(rled)
       bits_in_frame += exp_golomb_coding(rled)
 
-  if (is_p_block):
-    print(mv_modes_iterator)
+  # if (is_p_block):
+    # print(mv_modes_iterator)
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_modes_iterator
 
 def block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r):
@@ -1790,13 +1806,13 @@ if __name__ == "__main__":
   x_res = 352
   i = 16
   r = 1
-  QP = 11  # from 0 to (log_2(i) + 7)
+  QP = 6  # from 0 to (log_2(i) + 7)
   i_period = 4
   nRefFrames = 1
   VBSEnable = True
   FMEEnable = True
   FastME = True
-  RCflag = 2
+  RCflag = 3
   targetBR = 2458 # kbps
 
   # bits_in_each_frame = []
