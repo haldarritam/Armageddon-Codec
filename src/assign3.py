@@ -1288,8 +1288,7 @@ def QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i
 
 def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR):  
 
-  override = 0
-
+  override = 7
 
   cif_approx_i = [27248,27280,21128,15544,10680,6992,4360,2624,1416,664,264,176]
   cif_approx_p = [23192,16696,11904,7984,4888,2720,1608,1152,1024,904,736,664]
@@ -1367,7 +1366,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
   len_of_frame = []
 
-  prev_frame_size = 0
+  prev_frame_size = 1
   prev_avg_QP = 0
 
   is_p_block = -1
@@ -1404,7 +1403,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
     mv_mode_out = []
     mv_modes_iterator = 0
 
-    if (RCflag > 1):
+    if (RCflag >= 1):
 
       row_bits = bit_in_frame // n_y_blocks
 
@@ -1427,20 +1426,21 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         prev_size = len(bits_in_frame) + len(differentiated_modes_mv_frame)
 
       total_bit_in_frame = len(bits_in_frame) + len(differentiated_modes_mv_frame)
-
-      print(total_bit_in_frame)
-      print(bits_per_block_row)
+      print(total_bit_in_frame, ", ", bits_per_block_row)
 
       bit_proportion = np.array(bits_per_block_row) / total_bit_in_frame
 
-      # if (is_p_block and ((total_bit_in_frame / prev_frame_size) >= 1.3)):
-      #   is_p_block = 0
-      #   scene_change = 1
-     
-      # print("QP: ", QP, "total: ", total_bit_in_frame, "thresh: ", threshold_list[QP])
-      if (is_p_block and (total_bit_in_frame >= threshold_list[QP])):
+      if (is_p_block and ((total_bit_in_frame / prev_frame_size) >= 1.8)):
         is_p_block = 0
         scene_change = 1
+
+      # if scene_change:
+      #   print("Scene change detected at frame ", frame)
+     
+      # print("QP: ", QP, "total: ", total_bit_in_frame, "thresh: ", threshold_list[QP])
+      #if (is_p_block and (total_bit_in_frame >= threshold_list[QP])):
+        # is_p_block = 0
+        # scene_change = 1
 
       prev_frame_size = total_bit_in_frame
 
@@ -1816,18 +1816,18 @@ if __name__ == "__main__":
   # in_file = "./videos/synthetic_bw.yuv"
   # out_file = "./temp/synthetic_test.far"
 
-  number_frames = 10
+  number_frames = 21
   y_res = 288
   x_res = 352
   i = 16
   r = 1
   QP = 6  # from 0 to (log_2(i) + 7)
-  i_period = 4
+  i_period = 23
   nRefFrames = 1
   VBSEnable = True
   FMEEnable = True
   FastME = True
-  RCflag = 3
+  RCflag = 1
   targetBR = 2458 # kbps
 
   # bits_in_each_frame = []
