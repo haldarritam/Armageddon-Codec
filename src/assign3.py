@@ -1369,7 +1369,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   prev_frame_size = 1
   prev_avg_QP = 0
 
-  is_p_block = -1
+  is_p_block = 0
 
   for frame in range(number_frames):
 
@@ -1414,6 +1414,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
 
       QP = override
+      Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
 
       for bl_y_it in range(n_y_blocks):
 
@@ -1426,7 +1427,8 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         prev_size = len(bits_in_frame) + len(differentiated_modes_mv_frame)
 
       total_bit_in_frame = len(bits_in_frame) + len(differentiated_modes_mv_frame)
-      print(total_bit_in_frame, ", ", bits_per_block_row)
+
+      print(is_p_block, ",", total_bit_in_frame, ", ", bits_per_block_row)
 
       bit_proportion = np.array(bits_per_block_row) / total_bit_in_frame
 
