@@ -13,7 +13,7 @@ def worker_function(procnum, input_matrix, return_dict):
 
     result = random_number * input_matrix
 
-    return_dict[procnum] = result
+    return_dict[procnum] = [result, random_number] # We can use this list strategy to return multiple values from a process
 
 
 if __name__ == '__main__':
@@ -35,11 +35,11 @@ if __name__ == '__main__':
     for proc in jobs:
         proc.join()
 
-    print(return_dict[0])
-    print(return_dict[1])
-    print(return_dict[2])
-    print(return_dict[3])
-    print(return_dict[4])
+    print(return_dict[0][0], return_dict[0][1])
+    print(return_dict[1][0], return_dict[1][1])
+    print(return_dict[2][0], return_dict[2][1])
+    print(return_dict[3][0], return_dict[3][1])
+    print(return_dict[4][0], return_dict[4][1])
 
 
 # For our encoder, the worker_function can simply be the block_encoding function. 
