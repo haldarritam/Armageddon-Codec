@@ -2,6 +2,8 @@ import multiprocessing
 import numpy as np
 from random import randint
 
+# The function that is going to run in parallel
+# Notice that it can have as many parameters as we want
 def worker_function(procnum, input_matrix, return_dict):
     random_number = randint(0,100)
 
@@ -26,15 +28,21 @@ if __name__ == '__main__':
     # simply create p1 and p2 and do jobs.append(p1) jobs.append(p2) and p1.start()
     # and p2.start(). Later, we just need to do the join with the for structure.
     for i in range(5):
-        p = multiprocessing.Process(target=worker_function, args=(i, input_matrix, return_dict))
+        p = multiprocessing.Process(target=worker_function, args=(i, input_matrix, return_dict)) # Passing parameters to the function
         jobs.append(p)
         p.start()
 
     for proc in jobs:
         proc.join()
-        
+
     print(return_dict[0])
     print(return_dict[1])
     print(return_dict[2])
     print(return_dict[3])
     print(return_dict[4])
+
+
+# For our encoder, the worker_function can simply be the block_encoding function. 
+# The requirements are for just two threads, so we can run two instances of block_encoding at a time,
+# and get the values ordered in the dictionary. Then, we extract results from the dictionary and merge
+# them as needed to form the frame bitstream. 
