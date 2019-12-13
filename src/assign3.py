@@ -612,10 +612,11 @@ def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, VBSEnable, FMEEna
         for sub_idx in range(4):
           extracted += [extract_predicted_block(frame_buff, sub_head_idy[sub_idx], sub_head_idx[sub_idx], modes_mv[idx + sub_idx + 1], sub_i, FMEEnable)]
         
+        print(extracted[0].shape, extracted[1].shape, extracted[2].shape, extracted[3].shape)
+        
         conc_0 = np.concatenate((extracted[0], extracted[1]), axis=1)
         conc_1 = np.concatenate((extracted[2], extracted[3]), axis=1)
 
-        #print(extracted[0].shape, extracted[1].shape, extracted[2].shape, extracted[3].shape)
 
         extracted = np.concatenate((conc_0, conc_1), axis=0)
         
@@ -1320,17 +1321,17 @@ def detect_scene_change(curr_size, prev_size, curr_QP, prev_QP):
 
   difference = abs(curr_size - prev_size)
 
-  print("diff: ", difference, "curr_QP: ",curr_QP , "prev_QP: ", prev_QP, "scene_mat: ", scene_matrix[curr_QP][prev_QP])
+  # print("diff: ", difference, "curr_QP: ",curr_QP , "prev_QP: ", prev_QP, "scene_mat: ", scene_matrix[curr_QP][prev_QP])
 
   if (curr_QP <= prev_QP):
     if (difference >= scene_matrix[curr_QP][prev_QP]):
-      print("HERE 1")
+      # print("HERE 1")
       return 1
     else:
       return 0
   else:
     if (difference <= scene_matrix[curr_QP][prev_QP]):
-      print("HERE 2")
+      # print("HERE 2")
       return 1
     else:
       return 0
@@ -1846,7 +1847,7 @@ if __name__ == "__main__":
   # in_file = "./videos/synthetic_bw.yuv"
   # out_file = "./temp/synthetic_test.far"
 
-  number_frames = 21
+  number_frames = 10
   y_res = 288
   x_res = 352
   i = 16
@@ -1857,7 +1858,7 @@ if __name__ == "__main__":
   VBSEnable = True
   FMEEnable = True
   FastME = True
-  RCflag = 2
+  RCflag = 3
   targetBR = 2458 # kbps
 
   # bits_in_each_frame = []
