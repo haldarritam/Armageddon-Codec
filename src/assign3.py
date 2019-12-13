@@ -611,12 +611,11 @@ def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, VBSEnable, FMEEna
 
         for sub_idx in range(4):
           extracted += [extract_predicted_block(frame_buff, sub_head_idy[sub_idx], sub_head_idx[sub_idx], modes_mv[idx + sub_idx + 1], sub_i, FMEEnable)]
-        
-        print(extracted[0].shape, extracted[1].shape, extracted[2].shape, extracted[3].shape)
+
+        # print(extracted[0].shape, extracted[1].shape, extracted[2].shape, extracted[3].shape)
         
         conc_0 = np.concatenate((extracted[0], extracted[1]), axis=1)
         conc_1 = np.concatenate((extracted[2], extracted[3]), axis=1)
-
 
         extracted = np.concatenate((conc_0, conc_1), axis=0)
         
@@ -1418,6 +1417,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
   prev_frame_size = 0
   prev_avg_QP = 0
+  user_FMEEnable = FMEEnable
 
   prev_QP_scene_detect = 0
 
@@ -1461,6 +1461,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
       for bl_y_it in range(n_y_blocks):
 
         # First Pass
+        if RCflag == 3 :
+          FMEEnable = False
+
         _, bits_in_frame, differentiated_modes_mv_frame, temp_mv_mode_out = block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r)
 
         mv_mode_out += temp_mv_mode_out
@@ -1515,6 +1518,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         prev_QP = QP
 
       # Second Pass
+      if RCflag == 3 :
+        FMEEnable = user_FMEEnable
+
       qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_modes_iterator = block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RCflag, mv_mode_out, mv_modes_iterator)
 
       bits_used = len(bits_in_frame) + len(differentiated_modes_mv_frame)
@@ -1856,7 +1862,7 @@ if __name__ == "__main__":
   i_period = 4
   nRefFrames = 1
   VBSEnable = True
-  FMEEnable = True
+  FMEEnable = 0
   FastME = True
   RCflag = 3
   targetBR = 2458 # kbps
