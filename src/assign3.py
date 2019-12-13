@@ -119,11 +119,12 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
       
       extracted = reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i]
 
-    elif (x_dir % 2 and y_dir % 2): # both fractional
+    elif ((x_dir % 2) and (y_dir % 2)): # both fractional
       #print("BOTH FRAC", y_dir, x_dir)
       dy_dir = int(y_dir/2)
       dx_dir = int(x_dir/2)
       
+      #print(head_idy, dy_dir, head_idx, dx_dir, y_dir, x_dir)
       extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1] +
@@ -132,7 +133,7 @@ def FME_extraction(FMEEnabled, i, head_idy, head_idx, y_dir, x_dir, ext_y_res, e
     elif (x_dir % 2): # x fractional
       #print("X FRAC", y_dir, x_dir)
       dy_dir = int(y_dir/2)
-      dx_dir = int(x_dir / 2)
+      dx_dir = int(x_dir/2)
       
       extracted = (reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         reconstructed[head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 2
@@ -325,9 +326,9 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[0], sub_head_idx[0], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
   
   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[1], sub_head_idx[1], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
-    
+
   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[2], sub_head_idx[2], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
-    
+
   extracted_sub += [FME_extraction(FMEEnabled, sub_i, sub_head_idy[3], sub_head_idx[3], 0, 0, ext_y_res, ext_x_res, rec_buffer[0])]
   
   best_RDO_sub = []
@@ -339,10 +340,15 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
 
   mv = (0, 0, 0)
   sub_mv = [(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0)]
+  sub_mv_ret = sub_mv
+  mv_factor = 1
+
+  if RCflag == 3 and FMEEnabled:
+    mv_factor = 2
 
   if ((RCflag == 0) or (RCflag == 1) or (RCflag == 2)):
 
-    # print("RC: 0, 1 or 2" )
+    #print("RC: 0, 1 or 2" )
 
     mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
       # Sub-block prediction
@@ -356,24 +362,25 @@ def motion_vector_estimation_vbs(block, rec_buffer, r, head_idy, head_idx, ext_y
 
   elif ((RCflag == 3) and split == 0):
 
-    print("RC: 3, split: 0" )
+    #print("RC: 3, split: 0" )
 
-    mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy + mv_input[mv_iterator][0], head_idx + mv_input[mv_iterator][1], ext_y_res, ext_x_res, i, FMEEnabled, FastME, lambda_const, Q, best_RDO_block, nRefFrames)
-    
+    mv, best_RDO_block = fast_mv_vbs(block, rec_buffer, r, head_idy + mv_input[mv_iterator][0], head_idx + mv_input[mv_iterator][1], ext_y_res, ext_x_res, i, FMEEnabled, False, lambda_const, Q, best_RDO_block, nRefFrames)
+
+    mv_ret = [mv[0] + mv_input[mv_iterator][0]*mv_factor, mv[1] + mv_input[mv_iterator][1]*mv_factor, mv_input[mv_iterator][2]]
     mv_iterator += 1
-    return [0, mv], mv_iterator
+    return [0, mv_ret], mv_iterator
 
   elif ((RCflag == 3) and split == 1):
 
-    print("RC: 3, split: 0" )
+    #print("RC: 3, split: 1" )
 
     for sub_idx in range(4):
-      sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx] + mv_input[mv_iterator][0], sub_head_idx[sub_idx] + mv_input[mv_iterator][1], ext_y_res, ext_x_res, sub_i, FMEEnabled, FastME, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
-
+      sub_mv[sub_idx], best_RDO_sub[sub_idx] = fast_mv_vbs(sub_block[sub_idx], rec_buffer, r, sub_head_idy[sub_idx] + mv_input[mv_iterator][0], sub_head_idx[sub_idx] + mv_input[mv_iterator][1], ext_y_res, ext_x_res, sub_i, FMEEnabled, False, lambda_const, sub_Q, best_RDO_sub[sub_idx], nRefFrames)
+      sub_mv_ret[sub_idx] = [sub_mv[sub_idx][0] + mv_input[mv_iterator][0]*mv_factor, sub_mv[sub_idx][1] + mv_input[mv_iterator][1]*mv_factor, sub_mv[sub_idx][2]]
       mv_iterator += 1
 
     RDO_sub = best_RDO_sub[0] + best_RDO_sub[1] + best_RDO_sub[2] + best_RDO_sub[3]
-    return [1, sub_mv[0], sub_mv[1], sub_mv[2], sub_mv[3]], mv_iterator
+    return [1, sub_mv_ret[0], sub_mv_ret[1], sub_mv_ret[2], sub_mv_ret[3]], mv_iterator
 
 def intra_prediction(frame, bl_y_frame, y_idx, x_idx):
 
@@ -544,22 +551,28 @@ def intra_prediction_sub_block(frame, block, bl_y_it, bl_x_it, sub_Q, lambda_con
 def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
   if (FMEEnable):
     if ((mv[0] % 2 == 0) and (mv[1] % 2 == 0)): # none fractional
+      #print("None fractional")
+      #print(mv[2], head_idy, mv[0], i, head_idx, mv[1])
+      #print(mv[2], head_idy + mv[0], head_idy + mv[0] + i, head_idx + mv[1], head_idx + mv[1] + i)
       extracted = frame_buff[mv[2]][head_idy + mv[0] : head_idy + mv[0] + i, head_idx + mv[1] : head_idx + mv[1] + i]
-    elif (mv[0] % 2 and mv[1] % 2): # both fractional
+    elif ((mv[0] % 2) and (mv[1] % 2)): # both fractional
+      #print("Both fractional")
       dy_dir = int(mv[0]/2)
       dx_dir = int(mv[1]/2)
-            
+      
       extracted = (frame_buff[mv[2]][head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         frame_buff[mv[2]][head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i] +
         frame_buff[mv[2]][head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1] +
         frame_buff[mv[2]][head_idy + dy_dir + 1: head_idy + dy_dir + i + 1, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 4
     elif (mv[1] % 2): # x fractional
+      #print("X fractional")
       dy_dir = int(mv[0]/2)
-      dx_dir = int(mv[1] / 2)
+      dx_dir = int(mv[1]/2)
       
       extracted = (frame_buff[mv[2]][head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir : head_idx + dx_dir + i] +
         frame_buff[mv[2]][head_idy + dy_dir : head_idy + dy_dir + i, head_idx + dx_dir + 1 : head_idx + dx_dir + i + 1]) // 2
     else: # y fractional
+      #print("Y fractional")
       dy_dir = int(mv[0]/2)
       dx_dir = int(mv[1]/2)
             
@@ -567,6 +580,7 @@ def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
         frame_buff[mv[2]][head_idy + dy_dir + 1 : head_idy + dy_dir + i + 1, head_idx + dx_dir : head_idx + dx_dir + i]) // 2
 
   else:
+    #print("Exception")
     # print("\n")
     # print(mv)
     # print(head_idy, head_idx, i)
@@ -576,6 +590,7 @@ def extract_predicted_block(frame_buff, head_idy, head_idx, mv, i, FMEEnable):
     
     # print(extracted.shape)
 
+  #print(extracted)
   return extracted
 
 def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, VBSEnable, FMEEnable):
@@ -596,9 +611,11 @@ def extract_block(frame_buff, head_idy, head_idx, modes_mv, i, VBSEnable, FMEEna
 
         for sub_idx in range(4):
           extracted += [extract_predicted_block(frame_buff, sub_head_idy[sub_idx], sub_head_idx[sub_idx], modes_mv[idx + sub_idx + 1], sub_i, FMEEnable)]
-
+        
         conc_0 = np.concatenate((extracted[0], extracted[1]), axis=1)
         conc_1 = np.concatenate((extracted[2], extracted[3]), axis=1)
+
+        #print(extracted[0].shape, extracted[1].shape, extracted[2].shape, extracted[3].shape)
 
         extracted = np.concatenate((conc_0, conc_1), axis=0)
         
@@ -1153,10 +1170,10 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
         modes_mv_block += temp_mv
         mv_modes_iterator += 1
         
+      # print(modes_mv_block)
       split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
 
-    else:
-      # Calculate mode (intra)
+    else:      # Calculate mode (intra)
       if (VBSEnable):
         split, temp_mode, predicted_block = intra_prediction_vbs(new_reconstructed, bl_y_frame[frame][bl_y_it][bl_x_it], bl_y_it, bl_x_it, Q, sub_Q, lambda_const)
         modes_mv_block += [split]
@@ -1182,7 +1199,7 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
       bits_in_frame += exp_golomb_coding(rled)
 
   # if (is_p_block):
-  #   print(mv_modes_iterator)
+    # print(mv_modes_iterator)
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_modes_iterator
 
 def block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r):
@@ -1283,20 +1300,51 @@ def QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i
   Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
 
   return QP, Q, sub_QP, sub_Q, lambda_const
+
+def detect_scene_change(curr_size, prev_size, curr_QP, prev_QP):
+  # first_dim -> current QP
+  # second_dim -> prev_QP
+
+  scene_matrix = [[40000,	185640,	288279,	368579,	456575,	516351,	528368,	                      535336,	540061,	542462,	543681,	544546],
+                  [62322,	70000,	176644,	256944,	344940,	404716,	416733,	423701,	428426,	430827,	432046,	432911],
+                  [162591,	26264,	70000,	156675,	244671,	304447,	316464,	323432,	328157,	330558,	331777,	332642],
+                  [243655,	107328,	4689,	70000,	163607,	223383,	235400,	242368,	247093,	249494,	250713,	251578],
+                  [312503,	176176,	73537,	6763,	84311,	154535,	166552,	173520,	178245,	180646,	181865,	182730],
+                  [380428,	244101,	141462,	61162,	26834,	80000,	98627,	105595,	110320,	112721,	113940,	114805],
+                  [423876,	287549,	184910,	104610,	16614,	43162,	65789,	62147,	66872,	69273,	70492,	71357],
+                  [454447,	318120,	215481,	135181,	47185,	12591,	24608,	30000,	36301,	38702,	39921,	40786],
+                  [468569,	332242,	229603,	149303,	61307,	1531,	10486,	17454, 20000,	14562,	25799,	26664],
+                  [478497,	342170,	239531,	159231,	71235,	80879,	558,	7526,	1213,	10000,	15871,	16736],
+                  [483369,	347042,	244403,	164103,	76107,	16331,	4314,	2654,	7379,	1543,	10000,	11864],
+                  [486345,	350018,	247379,	167079,	79083,	19307,	7290,	322,	4403,	6804,	8023,	8000]]
+
+  difference = abs(curr_size - prev_size)
+
+  print("diff: ", difference, "curr_QP: ",curr_QP , "prev_QP: ", prev_QP, "scene_mat: ", scene_matrix[curr_QP][prev_QP])
+
+  if (curr_QP <= prev_QP):
+    if (difference >= scene_matrix[curr_QP][prev_QP]):
+      print("HERE 1")
+      return 1
+    else:
+      return 0
+  else:
+    if (difference <= scene_matrix[curr_QP][prev_QP]):
+      print("HERE 2")
+      return 1
+    else:
+      return 0
+    
+
 ##############################################################################
 ##############################################################################
 
 def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR):  
 
-  override = 0
-
-
   cif_approx_i = [27248,27280,21128,15544,10680,6992,4360,2624,1416,664,264,176]
   cif_approx_p = [23192,16696,11904,7984,4888,2720,1608,1152,1024,904,736,664]
   qcif_approx_i = [7424,7424,5856,4464,3328,2368,1600,1000,552,256,96,64]
-  qcif_approx_p = [5656, 4216, 3064, 2192, 1480, 912, 496, 312, 280, 248, 208, 184]
-  
-  threshold_list = [28324, 28709, 28474, 28057, 27513, 185570, 123879, 125766, 127108, 78226, 124162, 78569]
+  qcif_approx_p = [5656,4216,3064,2192,1480,912,496,312,280,248,208,184]
 
   if (nRefFrames > (i_period - 1)):
     print("\n\n\n*****  nRefFrames is incompatible with i_period.  *****\n\n\n")
@@ -1370,13 +1418,9 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   prev_frame_size = 0
   prev_avg_QP = 0
 
-  is_p_block = -1
+  prev_QP_scene_detect = 0
 
   for frame in range(number_frames):
-
-
-    # print("frame: ", frame)
-
 
     differentiated_modes_mv_frame = ''
 
@@ -1384,10 +1428,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
     modes_mv_block = []
 
-    is_p_block += 1
-
-    if ((frame % i_period) == 0):
-      is_p_block = 0
+    is_p_block = frame % i_period
 
     bits_used = 0
     prev_QP = 0
@@ -1410,11 +1451,11 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
       if (frame==0):
         QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(row_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits)
+
       else:
         QP = int(round(prev_avg_QP))
         Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
 
-      QP = override
 
       for bl_y_it in range(n_y_blocks):
 
@@ -1428,29 +1469,20 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
       total_bit_in_frame = len(bits_in_frame) + len(differentiated_modes_mv_frame)
 
-      print(total_bit_in_frame)
-      print(bits_per_block_row)
-
       bit_proportion = np.array(bits_per_block_row) / total_bit_in_frame
 
-      # if (is_p_block and ((total_bit_in_frame / prev_frame_size) >= 1.3)):
-      #   is_p_block = 0
-      #   scene_change = 1
-     
-      # print("QP: ", QP, "total: ", total_bit_in_frame, "thresh: ", threshold_list[QP])
-      if (is_p_block and (total_bit_in_frame >= threshold_list[QP])):
-        is_p_block = 0
-        scene_change = 1
+      if (is_p_block):
+        if (detect_scene_change(total_bit_in_frame, prev_frame_size, QP, prev_QP_scene_detect)):
+          is_p_block = 0
+          scene_change = 1
+
+      print((frame+1), "-->", is_p_block, "-->", QP, "\n")
 
       prev_frame_size = total_bit_in_frame
-
-      # print("is_p_frame: ", is_p_block, "\n")
+      prev_QP_scene_detect = QP
 
       if ((y_res == 288) and is_p_block):
-        approx_per_row_bits = np.array(cif_approx_p) * ((total_bit_in_frame / n_y_blocks) / cif_approx_p[QP])
-        
-        # print("new: ", approx_per_row_bits[QP], "old: ", cif_approx_p[QP], "fact: ", ((total_bit_in_frame / n_y_blocks) / cif_approx_p[QP]))
-
+        approx_per_row_bits = np.array(cif_approx_p) * ((total_bit_in_frame/n_y_blocks)/cif_approx_p[QP])
       elif ((y_res == 288) and not is_p_block):
         approx_per_row_bits = np.array(cif_approx_i) * ((total_bit_in_frame/n_y_blocks)/cif_approx_i[QP])
       elif ((y_res == 144) and is_p_block):
@@ -1474,8 +1506,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
           remaining_bits = (bit_in_frame - bits_used)
           proportion_adj_factor =  1 / np.sum(bit_proportion[bl_y_it:])
           remaining_bits *= (bit_proportion[bl_y_it] * proportion_adj_factor)
-          
-          # print("b_prop: ", (bit_proportion[bl_y_it] * proportion_adj_factor), "b_allo: ", remaining_bits, "b_rem: ", (bit_in_frame - bits_used))
       
         QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits) 
 
@@ -1535,7 +1565,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
     # print(rec_buffer.shape[0])
 
-    pre.progress("Encoding frames: ", frame, number_frames)
+    # pre.progress("Encoding frames: ", frame, number_frames)
     
 
 
@@ -1816,7 +1846,7 @@ if __name__ == "__main__":
   # in_file = "./videos/synthetic_bw.yuv"
   # out_file = "./temp/synthetic_test.far"
 
-  number_frames = 10
+  number_frames = 21
   y_res = 288
   x_res = 352
   i = 16
@@ -1827,7 +1857,7 @@ if __name__ == "__main__":
   VBSEnable = True
   FMEEnable = True
   FastME = True
-  RCflag = 3
+  RCflag = 2
   targetBR = 2458 # kbps
 
   # bits_in_each_frame = []
