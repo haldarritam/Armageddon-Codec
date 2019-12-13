@@ -1195,11 +1195,12 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
     for proc in jobs:
       proc.join()
 
-  for item in return_dict:
-    qtc_bitstream += item[0]
-    bits_in_frame += item[1]
-    differentiated_modes_mv_frame += item[2]
-    mv_modes_iterator += item[3]
+  if(ParallelMode == 1):
+    for item in return_dict:
+      qtc_bitstream += item[0]
+      bits_in_frame += item[1]
+      differentiated_modes_mv_frame += item[2]
+      mv_modes_iterator += item[3]
   
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, mv_modes_iterator
 
