@@ -1862,7 +1862,7 @@ if __name__ == "__main__":
   i_period = 4
   nRefFrames = 1
   VBSEnable = True
-  FMEEnable = 0
+  FMEEnable = True
   FastME = True
   RCflag = 3
   targetBR = 2458 # kbps
