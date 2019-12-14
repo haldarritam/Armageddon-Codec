@@ -1206,7 +1206,6 @@ def encode_one_block(bl_x_it, is_p_block, modes_mv_block, bl_y_frame, frame, bl_
   new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC[frame][bl_y_it][bl_x_it], Q, sub_Q, predicted_block, split, i)      
 
   # Differential Encoding
-
   rled_block, differentiated_modes_mv_frame = entropy(is_p_block, VBSEnable, split, differentiated_modes_mv_frame, modes_mv_block, bl_x_it, bl_y_it, QTC, frame, ParallelMode)
 
   # if (ParallelMode == 0):
@@ -1803,8 +1802,11 @@ def decoder(in_file, out_file):
     
     pre.progress("Decoding frames: ", frame, number_of_frames)
 
-    #is_i_frame = mdiff[lin_idx]
-    is_i_frame = False #ASS
+    if(ParallelMode == 1):
+      is_i_frame = False
+    else:
+      is_i_frame = mdiff[lin_idx]
+
     lin_idx += 1
     
     QP_list = []
@@ -1893,8 +1895,6 @@ def decoder(in_file, out_file):
             lin_idx += 3
           
         #  Decode
-        #print(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable, QTC_recovered, sub_Q)
-        print(modes_mv)
         split, predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable, QTC_recovered, sub_Q)
 
         new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, sub_Q, predicted_block, split, i)
