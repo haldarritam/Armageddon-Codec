@@ -1214,7 +1214,7 @@ def encode_one_block(bl_x_it, is_p_block, modes_mv_block, bl_y_frame, frame, bl_
   for rled in rled_block:
     qtc_bitstream += exp_golomb_coding(rled)
     bits_in_frame += exp_golomb_coding(rled)
-    
+
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator
   
   # elif (ParallelMode == 1):
@@ -1366,7 +1366,7 @@ def detect_scene_change(curr_size, prev_size, curr_QP, prev_QP):
   # first_dim -> current QP
   # second_dim -> prev_QP
 
-  scene_matrix = [[40000,	185640,	288279,	368579,	456575,	516351,	528368,	                      535336,	540061,	542462,	543681,	544546],
+  scene_matrix = [[40000,	185640,	288279,	368579,	456575,	516351,	528368, 535336,	540061,	542462,	543681,	544546],
                   [62322,	70000,	176644,	256944,	344940,	404716,	416733,	423701,	428426,	430827,	432046,	432911],
                   [162591,	26264,	70000,	156675,	244671,	304447,	316464,	323432,	328157,	330558,	331777,	332642],
                   [243655,	107328,	4689,	70000,	163607,	223383,	235400,	242368,	247093,	249494,	250713,	251578],
@@ -1697,7 +1697,6 @@ def decoder(in_file, out_file):
         
         encoded_bitstream += byte
 
-  print(encoded_bitstream)
   # Reading metadata
   while (int(encoded_bitstream[encoded_idx]) == 1):
     encoded_idx += 1
@@ -1869,7 +1868,7 @@ def decoder(in_file, out_file):
 
         else:
           if (VBSEnable):
-            prev_mode = prev_mode - mdiff[lin_idx]
+            prev_mode = mdiff[lin_idx]#prev_mode - mdiff[lin_idx]
             vbs_mode = prev_mode
             modes_mv += [vbs_mode]
             lin_idx += 1
@@ -1880,20 +1879,22 @@ def decoder(in_file, out_file):
               y_range = 5
 
             for num_mv in range(1, y_range):
-                prev_mv[0] = prev_mv[0] - mdiff[lin_idx+0]
-                prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
-                prev_mv[2] = prev_mv[2] - mdiff[lin_idx+2]
+                prev_mv[0] = mdiff[lin_idx+0]#prev_mv[0] - mdiff[lin_idx+0]
+                prev_mv[1] = mdiff[lin_idx+1]#prev_mv[1] - mdiff[lin_idx+1]
+                prev_mv[2] = mdiff[lin_idx+2]#prev_mv[2] - mdiff[lin_idx+2]
                 modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
                 lin_idx += 3
             
           else:
-            prev_mv[0] = prev_mv[0] - mdiff[lin_idx+0]
-            prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
-            prev_mv[2] = prev_mv[2] - mdiff[lin_idx+2]
+            prev_mv[0] = mdiff[lin_idx+0]#prev_mv[0] - mdiff[lin_idx+0]
+            prev_mv[1] = mdiff[lin_idx+1]#prev_mv[1] - mdiff[lin_idx+1]
+            prev_mv[2] = mdiff[lin_idx+2]#prev_mv[2] - mdiff[lin_idx+2]
             modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
             lin_idx += 3
           
         #  Decode
+        #print(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable, QTC_recovered, sub_Q)
+        print(modes_mv)
         split, predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable, QTC_recovered, sub_Q)
 
         new_reconstructed[bl_y_it][bl_x_it] = decoder_core(QTC_recovered, Q, sub_Q, predicted_block, split, i)
@@ -1965,7 +1966,7 @@ if __name__ == "__main__":
   decoder_infile = out_file
   decoder_outfile = "./videos/a3_CIF_decoded.yuv"
 
-  #encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR)
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR)
   decoder(decoder_infile, decoder_outfile)
   
 # ##############################################################################
