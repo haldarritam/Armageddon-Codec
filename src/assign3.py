@@ -4,6 +4,7 @@ import concurrent.futures
 import matplotlib.pyplot as plt
 import assign1_Q2_main as pre
 from scipy.fftpack import dct, idct
+import copy
 
 def dct2D(block):  # Transform Function
   res = dct(dct(block, axis=0, norm='ortho'), axis=1, norm='ortho')
@@ -1208,11 +1209,20 @@ def encode_one_block(bl_x_it, is_p_block, modes_mv_block, bl_y_frame, frame, bl_
 
   rled_block, differentiated_modes_mv_frame = entropy(is_p_block, VBSEnable, split, differentiated_modes_mv_frame, modes_mv_block, bl_x_it, bl_y_it, QTC, frame, ParallelMode)
 
+  # if (ParallelMode == 0):
+
   for rled in rled_block:
     qtc_bitstream += exp_golomb_coding(rled)
     bits_in_frame += exp_golomb_coding(rled)
-
+    
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator
+  
+  # elif (ParallelMode == 1):
+  #   for rled in rled_block:
+  #     qtc_bitstream_temp += exp_golomb_coding(rled)
+  #     bits_in_frame_temp += exp_golomb_coding(rled)
+
+  #   return qtc_bitstream_temp, bits_in_frame_temp, differentiated_modes_mv_frame_temp, new_reconstructed, mv_modes_iterator
 
 def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RC_pass, mv_mode_in, mv_modes_iterator, i, VBSEnable, RCflag, FMEEnable, FastME, nRefFrames, ParallelMode):
 
@@ -1222,14 +1232,19 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
   results = []
 
   if(ParallelMode == 1):      
-    with concurrent.futures.ProcessPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
       for bl_x_it in range(n_x_blocks):
-        results += [executor.submit(encode_one_block, bl_x_it, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RC_pass, mv_mode_in, mv_modes_iterator, i, VBSEnable, RCflag, FMEEnable, FastME, nRefFrames, ParallelMode)]
+        modes_mv_copy = copy.deepcopy(modes_mv_block)
+        qtc_bitstream_temp = ''
+        bits_in_frame_temp = ''
+        differentiated_modes_mv_frame_temp = ''
+
+        results += [executor.submit(encode_one_block, bl_x_it, is_p_block, modes_mv_copy, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame_temp, qtc_bitstream_temp, bits_in_frame_temp, r, RC_pass, mv_mode_in, mv_modes_iterator, i, VBSEnable, RCflag, FMEEnable, FastME, nRefFrames, ParallelMode)]
 
       for f in concurrent.futures.as_completed(results):
-        qtc_bitstream = f.result()[0]
-        bits_in_frame = f.result()[1]
-        differentiated_modes_mv_frame = f.result()[2]
+        qtc_bitstream += f.result()[0]
+        bits_in_frame += f.result()[1]
+        differentiated_modes_mv_frame += f.result()[2]
         new_reconstructed = f.result()[3]
 
   else:
@@ -1639,7 +1654,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   bits_in_a_byte = 8
   bits_in_mdiff = len(differentiated_modes_mv_bitstream)
 
-  differentiated_modes_mv_bitstream = exp_golomb_coding(y_res) + exp_golomb_coding(x_res) + exp_golomb_coding(i) + exp_golomb_coding(QP) + exp_golomb_coding(nRefFrames) + exp_golomb_coding(FMEEnable) + exp_golomb_coding(VBSEnable) + exp_golomb_coding(RCflag) + exp_golomb_coding(bits_in_mdiff) + differentiated_modes_mv_bitstream
+  differentiated_modes_mv_bitstream = exp_golomb_coding(y_res) + exp_golomb_coding(x_res) + exp_golomb_coding(i) + exp_golomb_coding(QP) + exp_golomb_coding(nRefFrames) + exp_golomb_coding(FMEEnable) + exp_golomb_coding(VBSEnable) + exp_golomb_coding(RCflag) + exp_golomb_coding(ParallelMode) + exp_golomb_coding(bits_in_mdiff) + differentiated_modes_mv_bitstream
 
   final_bitstream = differentiated_modes_mv_bitstream + qtc_bitstream
 
@@ -1682,6 +1697,7 @@ def decoder(in_file, out_file):
         
         encoded_bitstream += byte
 
+  print(encoded_bitstream)
   # Reading metadata
   while (int(encoded_bitstream[encoded_idx]) == 1):
     encoded_idx += 1
@@ -1694,6 +1710,7 @@ def decoder(in_file, out_file):
   FMEEnable, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   VBSEnable, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   RCflag, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
+  ParallelMode, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   
 
   print("----------------------------------------------")
@@ -1713,6 +1730,7 @@ def decoder(in_file, out_file):
   print("FMEEnable: ", FMEEnable)
   print("VBSEnable: ", VBSEnable)
   print("RCflag: ", RCflag)
+  print("ParallelMode: ", ParallelMode)
   print("----------------------------------------------")
 
   bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
@@ -1786,7 +1804,8 @@ def decoder(in_file, out_file):
     
     pre.progress("Decoding frames: ", frame, number_of_frames)
 
-    is_i_frame = mdiff[lin_idx]
+    #is_i_frame = mdiff[lin_idx]
+    is_i_frame = False #ASS
     lin_idx += 1
     
     QP_list = []
@@ -1946,7 +1965,7 @@ if __name__ == "__main__":
   decoder_infile = out_file
   decoder_outfile = "./videos/a3_CIF_decoded.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR)
+  #encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR)
   decoder(decoder_infile, decoder_outfile)
   
 # ##############################################################################
