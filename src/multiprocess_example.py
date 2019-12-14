@@ -21,7 +21,7 @@ if __name__ == '__main__':
     return_dict = manager.dict()
     jobs = []
 
-    input_matrix = np.ones((100,100), dtype=int)
+    input_matrix = np.ones((5,5), dtype=int)
 
     # This will create 5 copies of the worker_function running in parallel.
     # For the encoder, because we only need two process in parallel, we could
