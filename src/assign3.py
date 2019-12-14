@@ -1208,20 +1208,11 @@ def encode_one_block(bl_x_it, is_p_block, modes_mv_block, bl_y_frame, frame, bl_
   # Differential Encoding
   rled_block, differentiated_modes_mv_frame = entropy(is_p_block, VBSEnable, split, differentiated_modes_mv_frame, modes_mv_block, bl_x_it, bl_y_it, QTC, frame, ParallelMode)
 
-  # if (ParallelMode == 0):
-
   for rled in rled_block:
     qtc_bitstream += exp_golomb_coding(rled)
     bits_in_frame += exp_golomb_coding(rled)
 
-  return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator
-  
-  # elif (ParallelMode == 1):
-  #   for rled in rled_block:
-  #     qtc_bitstream_temp += exp_golomb_coding(rled)
-  #     bits_in_frame_temp += exp_golomb_coding(rled)
-
-  #   return qtc_bitstream_temp, bits_in_frame_temp, differentiated_modes_mv_frame_temp, new_reconstructed, mv_modes_iterator
+  return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator, bl_x_it
 
 def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RC_pass, mv_mode_in, mv_modes_iterator, i, VBSEnable, RCflag, FMEEnable, FastME, nRefFrames, ParallelMode):
 
@@ -1237,28 +1228,23 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
         qtc_bitstream_temp = ''
         bits_in_frame_temp = ''
         differentiated_modes_mv_frame_temp = ''
+        thread_rets = []
 
         results += [executor.submit(encode_one_block, bl_x_it, is_p_block, modes_mv_copy, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame_temp, qtc_bitstream_temp, bits_in_frame_temp, r, RC_pass, mv_mode_in, mv_modes_iterator, i, VBSEnable, RCflag, FMEEnable, FastME, nRefFrames, ParallelMode)]
 
       for f in concurrent.futures.as_completed(results):
-        qtc_bitstream += f.result()[0]
-        bits_in_frame += f.result()[1]
-        differentiated_modes_mv_frame += f.result()[2]
-        new_reconstructed = f.result()[3]
+        thread_rets += [[f.result()[5], f.result()[0], f.result()[1], f.result()[2], f.result()[3]]]
+
+      thread_rets.sort()
+      for element in thread_rets:
+        qtc_bitstream += element[1]
+        bits_in_frame += element[2]
+        differentiated_modes_mv_frame += element[3]
+        new_reconstructed = element[4]      
 
   else:
     for bl_x_it in range(n_x_blocks):
-      qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator = encode_one_block(bl_x_it, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RC_pass, mv_mode_in, mv_modes_iterator, i, VBSEnable, RCflag, FMEEnable, FastME, nRefFrames, ParallelMode)
-
-  # if(ParallelMode == 1):
-  #   for proc in jobs:
-  #     proc.join()
-
-  #   for i in range(len(return_dict)):
-  #     qtc_bitstream += return_dict[i][0]
-  #     bits_in_frame += return_dict[i][1]
-  #     differentiated_modes_mv_frame += return_dict[i][2]
-  #     mv_modes_iterator += return_dict[i][3]
+      qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator, _ = encode_one_block(bl_x_it, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, RC_pass, mv_mode_in, mv_modes_iterator, i, VBSEnable, RCflag, FMEEnable, FastME, nRefFrames, ParallelMode)
   
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator
 
@@ -1287,8 +1273,6 @@ def block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
       # print(modes_mv_block)
       # print(bl_x_it * i)
       split, predicted_block = extract_block(rec_buffer, bl_y_it * i, bl_x_it * i, modes_mv_block, i, VBSEnable, FMEEnable)
-
-      # print(frame, bl_y_it, bl_x_it, predicted_block[int(i/2)])
 
     else:
       # Calculate mode (intra)
@@ -1498,10 +1482,10 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
     is_p_block += 1
 
     if (ParallelMode == 1):
-        is_p_block = 1
-        if (frame == 0):
-          rec_buffer = np.delete(rec_buffer, np.s_[0:nRefFrames], 0)
-          rec_buffer = np.insert(rec_buffer, 0, np.full((ext_y_res, ext_x_res), 128, dtype=int), axis=0)
+      is_p_block = 1
+      if (frame == 0):
+        rec_buffer = np.delete(rec_buffer, np.s_[0:nRefFrames], 0)
+        rec_buffer = np.insert(rec_buffer, 0, np.full((ext_y_res, ext_x_res), 128, dtype=int), axis=0)
     elif ((frame % i_period) == 0):
       is_p_block = 0
 
@@ -1571,11 +1555,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
     differentiated_modes_mv_frame = ''
 
     for bl_y_it in range(n_y_blocks):
-
-      # print(bits_used)
-
-      # QP, Q, sub_QP, lambda_const, QP_list, prev_QP, remaining_bits = rate_controller(bit_in_frame, bits_used, i, y_res, n_y_blocks, bl_y_it, is_p_block, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, Constant, QP_list, prev_QP, remaining_bits, RCflag)
-
       if (RCflag):
         if((RCflag == 1) or scene_change):
           remaining_bits = (bit_in_frame - bits_used) // (n_y_blocks - bl_y_it)
@@ -1608,7 +1587,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
     # print(frame, frame_accumulated_bits_used)
 
     # insert i_period data/writing (modes_mv)
-    if (is_p_block): 
+    if (is_p_block):
       differentiated_modes_mv_frame = exp_golomb_coding(0) + differentiated_modes_mv_frame
     else:
       differentiated_modes_mv_frame = exp_golomb_coding(1) + differentiated_modes_mv_frame
@@ -1645,8 +1624,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
     # print(rec_buffer.shape[0])
 
-    pre.progress("Encoding frames: ", frame, number_frames)
-    
+    pre.progress("Encoding frames: ", frame, number_frames)   
 
 
   # Padding with 1s to make the number of bits divisible by 8
@@ -1742,9 +1720,9 @@ def decoder(in_file, out_file):
     temp, qtc_idx = I_golomb(qtc_encoded_bitstream, qtc_idx)
     qtc += [temp]
 
-  # Skipping padded 1s
-  while (int(mdiff_encoded_bitstream[mdiff_idx]) == 1):
-    mdiff_idx += 1
+  # # Skipping padded 1s
+  # while (int(mdiff_encoded_bitstream[mdiff_idx]) == 1):
+  #   mdiff_idx += 1
 
   # Reading mdiff data
   while (mdiff_idx < len(mdiff_encoded_bitstream)):
@@ -1798,15 +1776,14 @@ def decoder(in_file, out_file):
   modes_mv = []
   lin_idx = 0
   
-  for frame in range(number_of_frames):
-    
+  for frame in range(number_of_frames):    
     pre.progress("Decoding frames: ", frame, number_of_frames)
 
-    if(ParallelMode == 1):
-      is_i_frame = False
-    else:
-      is_i_frame = mdiff[lin_idx]
+  # if(ParallelMode == 1):
+    #   is_i_frame = False
+    # else:
 
+    is_i_frame = mdiff[lin_idx]    
     lin_idx += 1
     
     QP_list = []
@@ -1843,8 +1820,8 @@ def decoder(in_file, out_file):
         # Inverse scanning
         QTC_recovered, lin_it = I_scanning(qtc, i, lin_it)
 
-        if (ParallelMode == 1):
-          is_i_frame = 0
+        # if (ParallelMode == 1):
+        #   is_i_frame = 0
              
         if (is_i_frame):
           if (VBSEnable):
@@ -1870,29 +1847,47 @@ def decoder(in_file, out_file):
 
         else:
           if (VBSEnable):
-            prev_mode = mdiff[lin_idx]#prev_mode - mdiff[lin_idx]
-            vbs_mode = prev_mode
-            modes_mv += [vbs_mode]
-            lin_idx += 1
+            if (ParallelMode == 1):
+              vbs_mode = mdiff[lin_idx]
+              modes_mv += [vbs_mode]
+              lin_idx += 1
 
-            if (vbs_mode == 0):
-              y_range = 2
-            else:
-              y_range = 5
+              if (vbs_mode == 0):
+                y_range = 2
+              else:
+                y_range = 5
 
-            for num_mv in range(1, y_range):
-                prev_mv[0] = mdiff[lin_idx+0]#prev_mv[0] - mdiff[lin_idx+0]
-                prev_mv[1] = mdiff[lin_idx+1]#prev_mv[1] - mdiff[lin_idx+1]
-                prev_mv[2] = mdiff[lin_idx+2]#prev_mv[2] - mdiff[lin_idx+2]
-                modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
+              for num_mv in range(1, y_range):
+                modes_mv += [[mdiff[lin_idx+0], mdiff[lin_idx+1], mdiff[lin_idx+2]]]
                 lin_idx += 3
+            else:
+              prev_mode = prev_mode - mdiff[lin_idx]
+              vbs_mode = prev_mode
+              modes_mv += [vbs_mode]
+              lin_idx += 1
+
+              if (vbs_mode == 0):
+                y_range = 2
+              else:
+                y_range = 5
+
+              for num_mv in range(1, y_range):
+                  prev_mv[0] = prev_mv[0] - mdiff[lin_idx+0]
+                  prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
+                  prev_mv[2] = prev_mv[2] - mdiff[lin_idx+2]
+                  modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
+                  lin_idx += 3
             
           else:
-            prev_mv[0] = mdiff[lin_idx+0]#prev_mv[0] - mdiff[lin_idx+0]
-            prev_mv[1] = mdiff[lin_idx+1]#prev_mv[1] - mdiff[lin_idx+1]
-            prev_mv[2] = mdiff[lin_idx+2]#prev_mv[2] - mdiff[lin_idx+2]
-            modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
-            lin_idx += 3
+            if (ParallelMode == 1):
+              modes_mv += [[mdiff[lin_idx+0], mdiff[lin_idx+1], mdiff[lin_idx+2]]]
+              lin_idx += 3
+            else:
+              prev_mv[0] = prev_mv[0] - mdiff[lin_idx+0]
+              prev_mv[1] = prev_mv[1] - mdiff[lin_idx+1]
+              prev_mv[2] = prev_mv[2] - mdiff[lin_idx+2]
+              modes_mv += [[prev_mv[0], prev_mv[1], prev_mv[2]]]
+              lin_idx += 3
           
         #  Decode
         split, predicted_block = predict_block(rec_buffer, new_reconstructed, modes_mv, bl_y_it, bl_x_it, i, (not is_i_frame), VBSEnable, FMEEnable, QTC_recovered, sub_Q)
