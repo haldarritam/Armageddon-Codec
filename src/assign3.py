@@ -4,7 +4,7 @@ import concurrent.futures
 import matplotlib.pyplot as plt
 import assign1_Q2_main as pre
 from scipy.fftpack import dct, idct
-import copy, queue
+import copy, Queue
 
 def dct2D(block):  # Transform Function
   res = dct(dct(block, axis=0, norm='ortho'), axis=1, norm='ortho')
@@ -1409,7 +1409,6 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
       frame_sequence = 2
 
 
-
   bits_used = 0
   prev_QP = 0
   QP_list = []
@@ -1437,6 +1436,24 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
       Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
 
     for bl_y_it in range(n_y_blocks):
+
+      previous_frame = 0
+      if (frame_sequence == 2):
+        retry_get = True
+        retry_cnt = 0
+        while retry_get:
+          try:
+            prev_frame_data = q.get(True, 1)
+            retry_get =  False
+          except Queue.Empty:
+            retry_cnt += 1
+            if retry_cnt == 5:
+              retry_get  = False
+        prev_frame_metadata = prev_frame_data[0]
+        if  prev_frame_metadata == 5: #number of rows in the frame
+          previous_frame  = prev_frame_data[1]
+
+          
 
       # First Pass
       if RCflag == 3 :
