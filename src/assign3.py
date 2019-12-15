@@ -1248,7 +1248,7 @@ def block_encoding_sp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame,
   
   return qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator
 
-def block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r):
+def block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, i, VBSEnable, FMEEnable, FastME, nRefFrames):
 
   mv_mode_out = []
 
@@ -1310,7 +1310,7 @@ def QP_select(bit_stats_list, remaining_bits):
 
   return QP
 
-def calc_QP_dependents(QP, Constant):
+def calc_QP_dependents(QP, Constant, i):
   Q = calculate_Q(i, QP)
   sub_QP = 0
   if (QP == 0):
@@ -1324,7 +1324,7 @@ def calc_QP_dependents(QP, Constant):
   return Q, sub_QP, sub_Q, lambda_const
 
 
-def QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits):
+def QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits, y_res, i):
   if (type(approx_per_row_bits) != int):
     QP = QP_select(approx_per_row_bits, remaining_bits)
   elif (y_res == 288):
@@ -1341,7 +1341,7 @@ def QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i
     print("Resolution not supported!")
     quit()
 
-  Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
+  Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant, i)
 
   return QP, Q, sub_QP, sub_Q, lambda_const
 
@@ -1355,9 +1355,9 @@ def detect_scene_change(curr_size, prev_size, curr_QP, prev_QP):
                   [243655,	107328,	4689,	70000,	163607,	223383,	235400,	242368,	247093,	249494,	250713,	251578],
                   [312503,	176176,	73537,	6763,	84311,	154535,	166552,	173520,	178245,	180646,	181865,	182730],
                   [380428,	244101,	141462,	61162,	26834,	80000,	98627,	105595,	110320,	112721,	113940,	114805],
-                  [423876,	287549,	184910,	104610,	16614,	43162,	65789,	62147,	66872,	69273,	70492,	71357],
+                  [423876,	287549,	184910,	104610,	16614,	43162,	76898,	62147,	66872,	69273,	70492,	71357],
                   [454447,	318120,	215481,	135181,	47185,	12591,	24608,	30000,	36301,	38702,	39921,	40786],
-                  [468569,	332242,	229603,	149303,	61307,	1531,	10486,	17454, 20000,	14562,	25799,	26664],
+                  [468569,	332242,	229603,	149303,	61307,	1531,	5674,	17454, 20000,	14562,	25799,	26664],
                   [478497,	342170,	239531,	159231,	71235,	80879,	558,	7526,	1213,	10000,	15871,	16736],
                   [483369,	347042,	244403,	164103,	76107,	16331,	4314,	2654,	7379,	1543,	10000,	11864],
                   [486345,	350018,	247379,	167079,	79083,	19307,	7290,	322,	4403,	6804,	8023,	8000]]
@@ -1379,7 +1379,7 @@ def detect_scene_change(curr_size, prev_size, curr_QP, prev_QP):
     else:
       return 0
     
-def encoder_side_write_video(conc_reconstructed, n_y_blocks, n_x_blocks, converted):
+def encoder_side_write_video(conc_reconstructed, n_y_blocks, n_x_blocks, converted, i, y_res, x_res):
   counter = 0
   for bl_y_it in range(n_y_blocks):
     # Write frame (encoder output video)
@@ -1392,7 +1392,7 @@ def encoder_side_write_video(conc_reconstructed, n_y_blocks, n_x_blocks, convert
 ##############################################################################
 ##############################################################################
 
-def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, q):   
+def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, q, last_frame):   
 
   frame_sequence = 1
     
@@ -1438,11 +1438,11 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
     row_bits = bit_in_frame // n_y_blocks
 
     if (frame==0):
-      QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(row_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits)
+      QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(row_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits, y_res, i)
 
     else:
       QP = int(round(prev_avg_QP))
-      Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
+      Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant, i)
 
     for bl_y_it in range(n_y_blocks):          
 
@@ -1450,7 +1450,7 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
       if RCflag == 3 :
         FMEEnable = False
 
-      _, bits_in_frame, differentiated_modes_mv_frame, temp_mv_mode_out = block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r)
+      _, bits_in_frame, differentiated_modes_mv_frame, temp_mv_mode_out = block_encoding_fp(n_x_blocks, is_p_block, modes_mv_block, bl_y_frame, frame, bl_y_it, rec_buffer, ext_y_res, ext_x_res, Q, sub_Q, lambda_const, new_reconstructed, residual_matrix, QTC, differentiated_modes_mv_frame, qtc_bitstream, bits_in_frame, r, i, VBSEnable, FMEEnable, FastME, nRefFrames)
 
       mv_mode_out += temp_mv_mode_out
       
@@ -1466,7 +1466,7 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
         is_p_block = 0
         scene_change = 1
 
-    print((frame+1), "-->", is_p_block, "-->", QP, "\n")
+    # print((frame+1), "-->", is_p_block, "-->", QP, "\n")
 
     prev_frame_size = total_bit_in_frame
     prev_QP_scene_detect = QP
@@ -1520,7 +1520,7 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
         proportion_adj_factor =  1 / np.sum(bit_proportion[bl_y_it:])
         remaining_bits *= (bit_proportion[bl_y_it] * proportion_adj_factor)
     
-      QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits) 
+      QP, Q, sub_QP, sub_Q, lambda_const = QP_selector(remaining_bits, is_p_block, Constant, cif_approx_p, cif_approx_i, qcif_approx_p, qcif_approx_i, approx_per_row_bits, y_res, i) 
 
       true_QP += [QP]
       QP_list += [prev_QP - QP]
@@ -1544,7 +1544,7 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
         for x_it in range(x_res):
           conc_reconstructed[bl_y_it * i + i_it][x_it] = conc[i_it][x_it]
 
-    if (ParallelMode == 3):
+    if ((ParallelMode == 3) and (not last_frame)):
       if (frame_sequence == 1):
         retry = True
         while retry:
@@ -1580,42 +1580,47 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
   
   return FMEEnable, QP, differentiated_modes_mv_bitstream, is_p_block, len_of_frame, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, rec_buffer, remaining_bits, qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator, conc_reconstructed, frame
 
-def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR):  
+def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR, ParallelMode):  
 
   cif_approx_i = [27248,27280,21128,15544,10680,6992,4360,2624,1416,664,264,176]
   cif_approx_p = [23192,16696,11904,7984,4888,2720,1608,1152,1024,904,736,664]
   qcif_approx_i = [7424,7424,5856,4464,3328,2368,1600,1000,552,256,96,64]
   qcif_approx_p = [5656,4216,3064,2192,1480,912,496,312,280,248,208,184]
+  
+  # cif_approx_i = [13624,13640,10564,7772,5340,3496,2180,1312,708,332,132,88]
+  # cif_approx_p = [11596,8348,5952,3992,2444,1360,804,576,512,452,368,332]
+  # qcif_approx_i = [3712,3712,2928,2232,1664,1184,800,500,276,128,48,32]
+  # qcif_approx_p = [2828,2108,1532,1096,740,456,248,156,140,124,104,92]
 
   if (nRefFrames > (i_period - 1)):
     print("\n\n\n*****  nRefFrames is incompatible with i_period.  *****\n\n\n")
     return
-  print("----------------------------------------------")
-  print("----------------------------------------------")
-  print("A3 Encoder Parameters-")
-  print("----------------------------------------------")
-  print("in_file: ", in_file)
-  print("out_file: ", out_file)
-  print("number_frames: ", number_frames)
-  print("y_res: ", y_res)
-  print("x_res: ", x_res)
-  print("i: ", i)
-  print("r: ", r)
-  if(RCflag):
-    print("QP: Variable (RC enabled)")
-  else:
-    print("QP: ", QP)
+  # print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("A3 Encoder Parameters-")
+  # print("----------------------------------------------")
+  # print("in_file: ", in_file)
+  # print("out_file: ", out_file)
+  # print("number_frames: ", number_frames)
+  # print("y_res: ", y_res)
+  # print("x_res: ", x_res)
+  # print("i: ", i)
+  # print("r: ", r)
+  # if(RCflag):
+  #   print("QP: Variable (RC enabled)")
+  # else:
+  #   print("QP: ", QP)
 
-  print("i_period: ", i_period)
-  print("nRefFrames: ", nRefFrames)
-  print("VBSEnable: ", VBSEnable)
-  print("FMEEnable: ", FMEEnable)
-  print("FastME: ", FastME)
-  print("RCflag: ", RCflag)
-  if(RCflag):
-    print("targetBR: ", targetBR)
-  print("ParallelMode: ", ParallelMode)
-  print("----------------------------------------------")
+  # print("i_period: ", i_period)
+  # print("nRefFrames: ", nRefFrames)
+  # print("VBSEnable: ", VBSEnable)
+  # print("FMEEnable: ", FMEEnable)
+  # print("FastME: ", FastME)
+  # print("RCflag: ", RCflag)
+  # if(RCflag):
+  #   print("targetBR: ", targetBR)
+  # print("ParallelMode: ", ParallelMode)
+  # print("----------------------------------------------")
 
 
   targetBR_bps = 0
@@ -1628,6 +1633,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
     bit_in_frame = (targetBR_bps / 30) # for 30fps
 
   bl_y_frame, n_y_blocks, n_x_blocks, ext_y_res, ext_x_res = pre.block(in_file, y_res, x_res, number_frames, i)
+  FME_sel = FMEEnable
   # reconst = np.empty((ext_y_res, ext_x_res), dtype=int)
 
   rec_buffer = np.empty((nRefFrames, ext_y_res, ext_x_res), dtype=int)
@@ -1639,7 +1645,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   approx_residual = np.empty((number_frames, n_y_blocks, n_x_blocks, i, i), dtype=int)
 
   Constant = 35
-  Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant)
+  Q, sub_QP, sub_Q, lambda_const = calc_QP_dependents(QP, Constant, i)
 
   split = 0
 
@@ -1648,6 +1654,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   file_and_extension = out_file.split(".")
   converted_name = ".".join(file_and_extension[:-1]) + ".yuv"
   encoded_name = ".".join(file_and_extension[:-1]) + ".far"
+  FMEEnable = split
 
   converted = open(converted_name, "wb")
   encoded_file = open(encoded_name, "wb")
@@ -1674,8 +1681,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   for frame in range(0, number_frames, frames_per_cycle):
 
     q = queue.Queue(1)
-
-    thread_count = 0
     
     # print("frame: ", frame)
 
@@ -1683,6 +1688,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
       results = []
       thread_rets = []
+      last_frame = 0
       with concurrent.futures.ThreadPoolExecutor() as executor:        
         for frame_seq in range(2):
 
@@ -1692,20 +1698,13 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
       
           if ((frame + frame_seq) < number_frames):
 
-            thread_count += 1
-
-            # cif_approx_i_copy = copy.deepcopy(cif_approx_i)
-            # cif_approx_p_copy = copy.deepcopy(cif_approx_p)
-            # len_of_frame_copy = copy.deepcopy(len_of_frame)
-            # qcif_approx_i_copy = copy.deepcopy(qcif_approx_i)
-            # qcif_approx_p_copy = copy.deepcopy(qcif_approx_p)
-
-            # qtc_bitstream, differentiated_modes_mv_bitstream
+            if ((frame + frame_seq) == (number_frames - 1)):
+              last_frame = 1
 
             qtc_bitstream_frame = ''
             differentiated_modes_mv_bitstream_frame = ''
             
-            results += [executor.submit(encode_frame, Constant, FMEEnable, FastME, (frame + frame_seq), QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream_frame, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream_frame, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, q)]
+            results += [executor.submit(encode_frame, Constant, FMEEnable, FastME, (frame + frame_seq), QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream_frame, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream_frame, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, q, last_frame)]
             
         for f in concurrent.futures.as_completed(results):
           thread_rets += [[f.result()[16], f.result()[15], f.result()[3], f.result()[2], f.result()[10]]]
@@ -1720,14 +1719,14 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         if(rec_buffer.shape[0] > nRefFrames):
           rec_buffer = np.delete(rec_buffer, nRefFrames, 0)
 
-        encoder_side_write_video(element[1], n_y_blocks, n_x_blocks, converted)
+        encoder_side_write_video(element[1], n_y_blocks, n_x_blocks, converted, i, y_res, x_res)
 
         differentiated_modes_mv_bitstream += element[3]
         qtc_bitstream += element[4]
 
     else:
 
-      FMEEnable, QP, differentiated_modes_mv_bitstream, is_p_block, len_of_frame, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, rec_buffer, remaining_bits, qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator, conc_reconstructed, _ = encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, None)
+      FMEEnable, QP, differentiated_modes_mv_bitstream, is_p_block, len_of_frame, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, rec_buffer, remaining_bits, qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator, conc_reconstructed, _ = encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, None, None)
       
       if (not is_p_block):
         rec_buffer = np.delete(rec_buffer, np.s_[0:nRefFrames], 0)
@@ -1737,7 +1736,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
       if(rec_buffer.shape[0] > nRefFrames):
         rec_buffer = np.delete(rec_buffer, nRefFrames, 0)
 
-      encoder_side_write_video(conc_reconstructed, n_y_blocks, n_x_blocks, converted)
+      encoder_side_write_video(conc_reconstructed, n_y_blocks, n_x_blocks, converted, i, y_res, x_res)
 
     pre.progress("Encoding frames: ", frame, number_frames)
 
@@ -1745,6 +1744,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
   # Padding with 1s to make the number of bits divisible by 8
   bits_in_a_byte = 8
   bits_in_mdiff = len(differentiated_modes_mv_bitstream)
+  FMEEnable = FME_sel
 
   differentiated_modes_mv_bitstream = exp_golomb_coding(y_res) + exp_golomb_coding(x_res) + exp_golomb_coding(i) + exp_golomb_coding(QP) + exp_golomb_coding(nRefFrames) + exp_golomb_coding(FMEEnable) + exp_golomb_coding(VBSEnable) + exp_golomb_coding(RCflag) + exp_golomb_coding(ParallelMode) + exp_golomb_coding(bits_in_mdiff) + differentiated_modes_mv_bitstream
 
@@ -1804,29 +1804,30 @@ def decoder(in_file, out_file):
   ParallelMode, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   
 
-  print("----------------------------------------------")
-  print("----------------------------------------------")
-  print("A3 Decoder Parameters-")
-  print("----------------------------------------------")
-  print("in_file: ", in_file)
-  print("out_file: ", out_file)
-  print("y_res: ", y_res)
-  print("x_res: ", x_res)
-  print("i: ", i)
-  if(RCflag):
-    print("QP: Variable (RC enabled)")
-  else:
-    print("QP: ", QP)
-  print("nRefFrames: ", nRefFrames)
-  print("FMEEnable: ", FMEEnable)
-  print("VBSEnable: ", VBSEnable)
-  print("RCflag: ", RCflag)
-  print("ParallelMode: ", ParallelMode)
-  print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("----------------------------------------------")
+  # print("A3 Decoder Parameters-")
+  # print("----------------------------------------------")
+  # print("in_file: ", in_file)
+  # print("out_file: ", out_file)
+  # print("y_res: ", y_res)
+  # print("x_res: ", x_res)
+  # print("i: ", i)
+  # if(RCflag):
+  #   print("QP: Variable (RC enabled)")
+  # else:
+  #   print("QP: ", QP)
+  # print("nRefFrames: ", nRefFrames)
+  # print("FMEEnable: ", FMEEnable)
+  # print("VBSEnable: ", VBSEnable)
+  # print("RCflag: ", RCflag)
+  # print("ParallelMode: ", ParallelMode)
+  # print("----------------------------------------------")
 
   bits_in_mdiff, encoded_idx = I_golomb(encoded_bitstream, encoded_idx)
   mdiff_encoded_bitstream = encoded_bitstream[encoded_idx: encoded_idx + bits_in_mdiff]
-  qtc_encoded_bitstream = encoded_bitstream[encoded_idx + bits_in_mdiff: ]
+  qtc_encoded_bitstream = encoded_bitstream[encoded_idx + bits_in_mdiff :]
+  FMEEnable = mdiff_idx
 
 
   # Reading qtc data
@@ -2049,20 +2050,23 @@ if __name__ == "__main__":
   # in_file = "./videos/synthetic_bw.yuv"
   # out_file = "./temp/synthetic_test.far"
 
-  number_frames = 4
+  number_frames = 21
   y_res = 288
   x_res = 352
   i = 16
   r = 1
-  QP = 2  # from 0 to (log_2(i) + 7)
-  i_period = 4
+  QP = 4  # from 0 to (log_2(i) + 7)
+  i_period = 21
   nRefFrames = 1
   VBSEnable = True
-  FMEEnable = True
+  FMEEnable = False
   FastME = True
-  RCflag = 0
+  RCflag = 1
   targetBR = 2458 # kbps
-  ParallelMode = 1
+  ParallelMode = 0
+
+  # python main.py -in ./videos/CIF_bw.yuv -out ./videos/tests/CIF_QP1_1000.yuv -y_res 288 -x_res 352 -frames 21 -o both  -i 16 -r 1 -ip 21 -QP 4 -nRef 1 -vbs 1 -fme 0 -fastME 1 -RCflag 0 -targetBR 2458 -ParallelMode 0
+  
 
   # bits_in_each_frame = []
 
@@ -2076,7 +2080,7 @@ if __name__ == "__main__":
   decoder_infile = out_file
   decoder_outfile = "./videos/a3_CIF_decoded.yuv"
 
-  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR)
+  encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR, ParallelMode)
   decoder(decoder_infile, decoder_outfile)
   
 # ##############################################################################

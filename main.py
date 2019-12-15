@@ -3,7 +3,7 @@ import time
 import argparse
 sys.path.insert(1, './src')
 
-from assign2 import encoder, decoder
+from assign3 import encoder, decoder
 from tools import decoder as vbs_nref_tool
 from view_mv_tool import decoder as mv_tool
 
@@ -43,6 +43,12 @@ if __name__ == "__main__":
   
   parser.add_argument('-fastME', help='Fast motion estimation enable.', default=0, type=int, choices=[0, 1], metavar='default=0')
   
+  parser.add_argument('-RCflag', help='Rate Control Flag.', default=0, type=int, choices=[0, 1, 2, 3], metavar='default=0')
+  
+  parser.add_argument('-targetBR', help='Target Bit-Rate (in kbps).', default=2458, type=int, metavar='default=2458')
+  
+  parser.add_argument('-ParallelMode', help='Parallel Encoding mode.', default=0, type=int, choices=[0, 1, 2, 3], metavar='default=0')
+  
   
   # Reading command line arguments
   args = vars(parser.parse_args())  
@@ -61,21 +67,28 @@ if __name__ == "__main__":
   VBSEnable = args['vbs']
   FMEEnable = args['fme']
   FastME = args['fastME']
+  
+  RCflag = args['RCflag']
+  targetBR = args['targetBR']
+  ParallelMode = args['ParallelMode']
 
   operation = args['o']
 
 
   if (operation == 'encode'):
-    encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+    encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR, ParallelMode)
+
+
   elif (operation == 'decode'):
     decoder(in_file, out_file)
+
   elif (operation == 'both'):
     file_and_extension = out_file.split(".")
     encoded_name = ".".join(file_and_extension[:-1]) + "_encoded.far"
     decoded_name = ".".join(file_and_extension[:-1]) + "_decoded.yuv"
 
     start = time.time()
-    encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME)
+    encoder(in_file, encoded_name, number_frames, y_res, x_res, i, r, QP, i_period, nRefFrames, VBSEnable, FMEEnable, FastME, RCflag, targetBR, ParallelMode)
     encoder_end = time.time()
     decoder(encoded_name, decoded_name)
     decoder_end = time.time()
