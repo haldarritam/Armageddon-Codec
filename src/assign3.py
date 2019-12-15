@@ -1379,18 +1379,15 @@ def detect_scene_change(curr_size, prev_size, curr_QP, prev_QP):
     else:
       return 0
     
-def encoder_side_write_video(new_reconstructed, n_y_blocks, n_x_blocks, converted):
+def encoder_side_write_video(conc_reconstructed, n_y_blocks, n_x_blocks, converted):
   counter = 0
   for bl_y_it in range(n_y_blocks):
-    conc = np.concatenate((new_reconstructed[bl_y_it][0], new_reconstructed[bl_y_it][1]), axis=1)
-    for bl_x_it in range(2, n_x_blocks):
-      conc = np.concatenate((conc, new_reconstructed[bl_y_it][bl_x_it]), axis=1)
     # Write frame (encoder output video)
     for i_it in range(i):
       if (counter < y_res):
         counter += 1
         for x_it in range(x_res):
-          converted.write(((int)(conc[i_it][x_it])).to_bytes(1, byteorder=sys.byteorder))
+          converted.write(((int)(conc_reconstructed[bl_y_it*i + i_it][x_it])).to_bytes(1, byteorder=sys.byteorder))
 
 ##############################################################################
 ##############################################################################
@@ -1697,22 +1694,25 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
 
             thread_count += 1
 
-            cif_approx_i_copy = copy.deepcopy(cif_approx_i)
-            cif_approx_p_copy = copy.deepcopy(cif_approx_p)
-            len_of_frame_copy = copy.deepcopy(len_of_frame)
-            qcif_approx_i_copy = copy.deepcopy(qcif_approx_i)
-            qcif_approx_p_copy = copy.deepcopy(qcif_approx_p)
+            # cif_approx_i_copy = copy.deepcopy(cif_approx_i)
+            # cif_approx_p_copy = copy.deepcopy(cif_approx_p)
+            # len_of_frame_copy = copy.deepcopy(len_of_frame)
+            # qcif_approx_i_copy = copy.deepcopy(qcif_approx_i)
+            # qcif_approx_p_copy = copy.deepcopy(qcif_approx_p)
 
-            Constant, FMEEnable, FastME, (frame + frame_seq), QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i_copy, cif_approx_p_copy, converted, i, i_period, is_p_block, len_of_frame_copy, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i_copy, qcif_approx_p_copy, qtc_bitstream, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, q
+            # qtc_bitstream, differentiated_modes_mv_bitstream
 
-            results += [executor.submit(encode_frame, Constant, FMEEnable, FastME, (frame + frame_seq), QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, q)]
+            qtc_bitstream_frame = ''
+            differentiated_modes_mv_bitstream_frame = ''
+            
+            results += [executor.submit(encode_frame, Constant, FMEEnable, FastME, (frame + frame_seq), QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream_frame, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream_frame, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, q)]
             
         for f in concurrent.futures.as_completed(results):
-          thread_rets += [[f.result()[16], f.result()[15], f.result()[13], f.result()[3]]]
+          thread_rets += [[f.result()[16], f.result()[15], f.result()[3], f.result()[2], f.result()[10]]]
 
       thread_rets.sort()
       for element in thread_rets:
-        if (not element[3]):
+        if (not element[2]):
           rec_buffer = np.delete(rec_buffer, np.s_[0:nRefFrames], 0)
 
         rec_buffer = np.insert(rec_buffer, 0, element[1], axis=0)
@@ -1720,10 +1720,13 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
         if(rec_buffer.shape[0] > nRefFrames):
           rec_buffer = np.delete(rec_buffer, nRefFrames, 0)
 
-        encoder_side_write_video(element[2], n_y_blocks, n_x_blocks, converted)
+        encoder_side_write_video(element[1], n_y_blocks, n_x_blocks, converted)
 
+        differentiated_modes_mv_bitstream += element[3]
+        qtc_bitstream += element[4]
 
     else:
+
       FMEEnable, QP, differentiated_modes_mv_bitstream, is_p_block, len_of_frame, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, rec_buffer, remaining_bits, qtc_bitstream, bits_in_frame, differentiated_modes_mv_frame, new_reconstructed, mv_modes_iterator, conc_reconstructed, _ = encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i, cif_approx_p, converted, i, i_period, is_p_block, len_of_frame, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i, qcif_approx_p, qtc_bitstream, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, None)
       
       if (not is_p_block):
@@ -1734,7 +1737,7 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
       if(rec_buffer.shape[0] > nRefFrames):
         rec_buffer = np.delete(rec_buffer, nRefFrames, 0)
 
-      encoder_side_write_video(new_reconstructed, n_y_blocks, n_x_blocks, converted)
+      encoder_side_write_video(conc_reconstructed, n_y_blocks, n_x_blocks, converted)
 
     pre.progress("Encoding frames: ", frame, number_frames)
 
@@ -2059,7 +2062,7 @@ if __name__ == "__main__":
   FastME = True
   RCflag = 0
   targetBR = 2458 # kbps
-  ParallelMode = 3
+  ParallelMode = 1
 
   # bits_in_each_frame = []
 
