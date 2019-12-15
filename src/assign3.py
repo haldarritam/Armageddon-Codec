@@ -1489,16 +1489,18 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
   counter = 0
   conc_reconstructed = np.zeros((ext_y_res, ext_x_res), dtype = int)
 
+  prev_frame_data = 0
+  prev_frame_metadata = 0
   for bl_y_it in range(n_y_blocks):
 
     if (ParallelMode == 3):
-      prev_frame_data = 0
-      prev_frame_metadata = 0
       if (frame_sequence == 2):
         retry_get = True
         retry_cnt = 0
         while retry_get:
           try:
+            if bl_y_it >= n_y_blocks-2:
+              break
             prev_frame_data = q.get(True, 1)
           except queue.Empty:
             retry_cnt += 1
@@ -1512,8 +1514,6 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
             temp = prev_frame_data[1]
             rec_buffer = np.array([temp])
             retry_get = False
-
-        print("--------------------------------")
 
     if (RCflag):
       if((RCflag == 1) or scene_change):
@@ -1549,7 +1549,6 @@ def encode_frame(Constant, FMEEnable, FastME, frame, QTC, RCflag, VBSEnable, bit
 
     if (ParallelMode == 3):
       if (frame_sequence == 1):
-        print(bl_y_it)
         retry = True
         while retry:
           try:
@@ -1703,53 +1702,6 @@ def encoder(in_file, out_file, number_frames, y_res, x_res, i, r, QP, i_period, 
             len_of_frame_copy = copy.deepcopy(len_of_frame)
             qcif_approx_i_copy = copy.deepcopy(qcif_approx_i)
             qcif_approx_p_copy = copy.deepcopy(qcif_approx_p)
-
-            # print("Constant " + str(type(Constant)))
-            # print("FMEEnable " + str(type(FMEEnable)))
-            # print("FastME " + str(type(FastME)))
-            # print("frame " + str(type(frame)))
-            # print("frame_seq " + str(type(frame_seq)))
-            # print("QTC " + str(type(QTC)))
-            # print("RCflag " + str(type(RCflag)))
-            # print("VBSEnable " + str(type(VBSEnable)))
-            # print("bit_in_frame " + str(type(bit_in_frame)))
-            # print("cif_approx_i " + str(type(cif_approx_i)))
-            # print("cif_approx_p " + str(type(cif_approx_p)))
-            # print("converted " + str(type(converted)))
-            # print("i " + str(type(i)))
-            # print("i_period " + str(type(i_period)))
-            # print("is_p_block " + str(type(is_p_block)))
-            # print("len_of_frame " + str(type(len_of_frame)))
-            # print("nRefFrames " + str(type(nRefFrames)))
-            # print("new_reconstructed " + str(type(new_reconstructed)))
-            # print("number_frames " + str(type(number_frames)))
-            # print("prev_QP_scene_detect " + str(type(prev_QP_scene_detect)))
-            # print("prev_avg_QP " + str(type(prev_avg_QP)))
-            # print("prev_frame_size " + str(type(prev_frame_size)))
-            # print("qcif_approx_i " + str(type(qcif_approx_i)))
-            # print("qcif_approx_p " + str(type(qcif_approx_p)))
-            # print("qtc_bitstream " + str(type(qtc_bitstream)))
-            # print("r " + str(type(r)))
-            # print("rec_buffer " + str(type(rec_buffer)))
-            # print("remaining_bits " + str(type(remaining_bits)))
-            # print("residual_matrix " + str(type(residual_matrix)))
-            # print("user_FMEEnable " + str(type(user_FMEEnable)))
-            # print("x_res " + str(type(x_res)))
-            # print("y_res " + str(type(y_res)))
-            # print("ext_y_res " + str(type(ext_y_res)))
-            # print("ext_x_res " + str(type(ext_x_res)))
-            # print("n_y_blocks " + str(type(n_y_blocks)))
-            # print("n_x_blocks " + str(type(n_x_blocks)))
-            # print("bl_y_frame " + str(type(bl_y_frame)))
-            # print("differentiated_modes_mv_bitstream " + str(type(differentiated_modes_mv_bitstream)))
-            # print("QP " + str(type(QP)))
-            # print("sub_QP " + str(type(sub_QP)))
-            # print("Q " + str(type(Q)))
-            # print("sub_Q " + str(type(sub_Q)))
-            # print("lambda_const " + str(type(lambda_const)))
-            # print("ParallelMode " + str(type(ParallelMode)))
-            # print("q " + str(type(q)))
-            # quit()
 
             Constant, FMEEnable, FastME, (frame + frame_seq), QTC, RCflag, VBSEnable, bit_in_frame, cif_approx_i_copy, cif_approx_p_copy, converted, i, i_period, is_p_block, len_of_frame_copy, nRefFrames, new_reconstructed, number_frames, prev_QP_scene_detect, prev_avg_QP, prev_frame_size, qcif_approx_i_copy, qcif_approx_p_copy, qtc_bitstream, r, rec_buffer, remaining_bits, residual_matrix, user_FMEEnable, x_res, y_res, ext_y_res, ext_x_res, n_y_blocks, n_x_blocks, bl_y_frame, differentiated_modes_mv_bitstream, QP, sub_QP, Q, sub_Q, lambda_const, ParallelMode, q
 
